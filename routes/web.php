@@ -16,6 +16,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('contas', ContaController::class)->except(['index']);
     Route::post('/contas/{id}/sync', [ContaController::class, 'sync'])->name('contas.sync');
     Route::post('/contas/sync-all', [ContaController::class, 'syncAll'])->name('contas.syncAll');
+    Route::get('/contas/{id}/detalhes', [ContaController::class, 'show'])->name('contas.show');
 
     // 👑 ÁREA DO ADMINISTRADOR (Protegida por nível de acesso)
     Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {

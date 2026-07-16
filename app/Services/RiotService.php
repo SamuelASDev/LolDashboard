@@ -56,12 +56,16 @@ class RiotService
             'https://www.replays.lol/cutoff/BR/grandmaster'
         );
 
+        if ($response->failed()) {
+            return null;
+        }
+
         $html = $response->body();
 
-        // ✅ remove comentários HTML do React
-        $html = preg_replace('/<!--.*?-->/', '', $html);
+        // remove comentários HTML do React
+        $html = preg_replace('//', '', $html);
 
-        // ✅ agora captura o número corretamente
+        // agora captura o número corretamente
         preg_match('/(\d+)\s*LP/i', $html, $matches);
 
         return isset($matches[1]) ? (int)$matches[1] : null;
@@ -70,7 +74,7 @@ class RiotService
     // ✅ PASSO 4 — PUUID → Pegar ID do último jogo Ranqueado Solo (Queue 420)
     public function getLastMatchId($puuid)
     {
-        // A Match API usa a rota regional 'americas', indepedente de ser BR, NA, etc.
+        // A Match API usa a rota regional 'americas', independente de ser BR, NA, etc.
         $response = Http::get(
             "https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{$puuid}/ids",
             [
@@ -106,4 +110,30 @@ class RiotService
         return $data['info']['gameEndTimestamp'] ?? null;
     }
 
+    // ✅ PASSO 6 — PUUID → Pegar lista de IDs de partidas com paginação e contagem dinâmica
+    public function getRecentMatchIds($puuid, $count = 20, $start = 0)
+    {
+        $response = Http::get(
+            "https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{$puuid}/ids",
+            [
+                'api_key' => $this->apiKey,
+                'queue' => 420, // 420 = Ranked Solo/Duo
+                'start' => $start,
+                'count' => $count
+            ]
+        );
+
+        return $response->successful() ? $response->json() : [];
+    }
+
+    // ✅ PASSO 7 — Match ID → Busca os dados detalhados de uma partida específica
+    public function getMatchDetail($matchId)
+    {
+        $response = Http::get(
+            "https://americas.api.riotgames.com/lol/match/v5/matches/{$matchId}",
+            ['api_key' => $this->apiKey]
+        );
+
+        return $response->successful() ? $response->json() : null;
+    }
 }

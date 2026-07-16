@@ -5,7 +5,7 @@
 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
     <div>
         <h2 class="text-2xl font-bold text-slate-100">Suas Contas Vinculadas</h2>
-        <p class="text-sm text-slate-400">Gerencie e acompanhe o elo de suas contas em tempo real.</p>
+        <p class="text-sm text-slate-400">Gerencie e acompanhe o elo de suas contas in tempo real.</p>
     </div>
     
     <div class="flex gap-3">
@@ -67,17 +67,17 @@
             <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r {{ $colorClass }}"></div>
 
             <div>
-                <div class="flex justify-between items-start mb-4">
-                    <div>
+                <div class="flex justify-between items-start mb-4 gap-2">
+                    <div class="min-w-0 flex-1">
                         <span class="text-xs font-semibold px-2.5 py-1 bg-slate-800 text-slate-400 rounded-full border border-slate-700">
                             {{ strtoupper($conta->regiao) }}
                         </span>
-                        <h3 class="text-lg font-bold text-slate-100 mt-2 tracking-wide" title="{{ $conta->riot_id }}">
+                        <h3 class="text-base sm:text-lg font-bold text-slate-100 mt-2 tracking-wide break-words" title="{{ $conta->riot_id }}">
                             {{ $conta->riot_id }}
                         </h3>
                     </div>
                     
-                    <form method="POST" action="{{ route('contas.sync', $conta->id) }}">
+                    <form method="POST" action="{{ route('contas.sync', $conta->id) }}" class="flex-shrink-0">
                         @csrf
                         <button type="submit" class="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition" title="Sincronizar esta conta">
                             🔄
@@ -116,7 +116,6 @@
                     <div class="mt-2 mb-4 p-3 rounded-xl border border-slate-800 bg-slate-950/45 text-xs font-medium">
                         @if(!empty($conta->last_game_at) && $conta->last_game_at->year > 1970)
                             @php
-                                // Sua fórmula matemática exata mantendo o ajuste de dias
                                 $horasPassadas = $conta->last_game_at->diffInHours(now());
                                 $horasRestantes = 336 - $horasPassadas;
                                 $diasRestantes = floor($horasRestantes / 24) - 1;
@@ -160,6 +159,66 @@
                     </div>
                 </div>
 
+                <div class="mb-4 pt-1">
+                    <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2">Top 3 Campeões Recentes (SoloQ)</p>
+                    
+                    @php
+                        $partidasRecentes = $conta->partidas()->orderByDesc('played_at')->get();
+                        
+                        $campeoesAgrupados = $partidasRecentes->groupBy('champion_name')
+                            ->map(function ($jogos) {
+                                $total = $jogos->count();
+                                $vitorias = $jogos->where('win', true)->count();
+                                $kills = $jogos->sum('kills');
+                                $deaths = $jogos->sum('deaths');
+                                $assists = $jogos->sum('assists');
+                                
+                                return [
+                                    'nome' => $jogos->first()->champion_name,
+                                    'jogos' => $total,
+                                    'winrate' => round(($vitorias / $total) * 100, 0),
+                                    'kda' => $deaths > 0 ? round(($kills + $assists) / $deaths, 2) : ($kills + $assists)
+                                ];
+                            })
+                            ->sortByDesc('jogos')
+                            ->take(3);
+                    @endphp
+
+                    <div class="space-y-1.5">
+                        @forelse($campeoesAgrupados as $camp)
+                            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/40 border border-slate-800/40">
+                                <div class="flex items-center gap-2">
+                                    <img src="https://cdn.communitydragon.org/latest/champion/{{ str_replace(' ', '', $camp['nome']) }}/square" 
+                                         alt="{{ $camp['nome'] }}" 
+                                         class="w-7 h-7 rounded-lg border border-slate-700/60 object-cover bg-slate-800"
+                                         onerror="this.style.display='none';">
+                                    <div>
+                                        <span class="text-xs font-bold text-slate-300 block">{{ $camp['nome'] }}</span>
+                                        <span class="text-[9px] text-slate-500">{{ $camp['jogos'] }} jogos</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-right">
+                                    <span class="text-xs font-black block {{ $camp['winrate'] >= 55 ? 'text-emerald-400' : ($camp['winrate'] < 50 ? 'text-red-400' : 'text-amber-400') }}">
+                                        {{ $camp['winrate'] }}% WR
+                                    </span>
+                                    <span class="text-[9px] text-slate-500">KDA: <strong>{{ $camp['kda'] }}</strong></span>
+                                </div>
+                            </div>
+                        @empty
+                            <p class="text-[11px] text-slate-500 italic text-center py-2 bg-slate-950/20 border border-slate-900 rounded-lg">
+                                Sincronize para carregar o histórico de campeões.
+                            </p>
+                        @endforelse
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <a href="{{ route('contas.show', $conta->id) }}" class="block w-full text-center py-2 bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-slate-100 font-bold text-xs rounded-xl border border-slate-700/50 transition">
+                        Ver Detalhes (Histórico Completo) 📊
+                    </a>
+                </div>
+
                 <details class="text-xs text-slate-500 cursor-pointer mb-4 group/details">
                     <summary class="hover:text-slate-400 transition select-none">Identificação interna</summary>
                     <div class="mt-2 p-2 bg-slate-950/60 border border-slate-800 rounded-lg text-slate-400">
@@ -194,28 +253,78 @@
     @endforelse
 </div>
 
-<div class="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 text-center shadow-xl">
-    <h3 class="text-lg font-bold text-slate-200 mb-6 tracking-wide flex items-center justify-center gap-2">
-        <span>📊</span> Resumo Geral do Perfil
+<div class="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+    <div class="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-slate-800 via-indigo-500/20 to-slate-800"></div>
+
+    <h3 class="text-lg font-bold text-slate-200 mb-6 tracking-wide flex items-center gap-2">
+        <span>📊</span> Resumo Geral do Perfil Unificado
     </h3>
     
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <div class="p-4 bg-slate-950/40 border border-slate-900 rounded-xl">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="p-4 bg-slate-950/50 border border-slate-900 rounded-xl shadow-inner">
             <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">Total de Jogos</span>
             <span class="text-2xl font-black text-slate-200">{{ $totalGames }}</span>
         </div>
-        <div class="p-4 bg-slate-950/40 border border-slate-900 rounded-xl">
+        <div class="p-4 bg-slate-950/50 border border-slate-900 rounded-xl shadow-inner">
             <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">Vitórias / Derrotas</span>
-            <span class="text-2xl font-black text-slate-200">{{ $totalWins }} <span class="text-xs text-slate-500">vs</span> {{ $totalLosses }}</span>
+            <span class="text-xl font-black text-slate-200">{{ $totalWins }}W / {{ $totalLosses }}L</span>
         </div>
-        <div class="p-4 bg-slate-950/40 border border-slate-900 rounded-xl">
+        <div class="p-4 bg-slate-950/50 border border-slate-900 rounded-xl shadow-inner">
             <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">Winrate Média</span>
             <span class="text-2xl font-black {{ $avgWinrate >= 55 ? 'text-emerald-400' : ($avgWinrate < 50 ? 'text-red-400' : 'text-amber-400') }}">{{ $avgWinrate }}%</span>
         </div>
-        <div class="p-4 bg-slate-950/40 border border-slate-900 rounded-xl">
-            <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">Corte GM (BR)</span>
-            <span class="text-2xl font-black text-rose-400">{{ !empty($gmCutoff) ? $gmCutoff . ' LP' : '---' }}</span>
+        <div class="p-4 bg-slate-950/50 border border-slate-900 rounded-xl shadow-inner">
+            <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">KDA Global</span>
+            <span class="text-2xl font-black text-indigo-400">{{ $globalKDA ?? '0.00' }}</span>
+            <span class="text-[10px] text-slate-500 block mt-1">Soma de {{ $totalGeralJogos ?? 0 }} partidas</span>
         </div>
+    </div>
+    
+    <div class="pt-6 border-t border-slate-800/60">
+        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 text-left flex items-center gap-1.5">
+            <span class="text-amber-500">🔥</span> Todos os Campeões Registrados no Histórico (Soma de Todas as Contas)
+        </h4>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            @forelse($campeoesGlobais as $camp)
+                <div class="p-3 bg-slate-950/40 border border-slate-900 rounded-xl flex flex-col justify-between hover:border-slate-800 transition">
+                    <div class="flex items-center gap-2 mb-2 min-w-0">
+                        <img src="https://cdn.communitydragon.org/latest/champion/{{ str_replace(' ', '', $camp['champion_name']) }}/square" 
+                             alt="{{ $camp['champion_name'] }}" 
+                             class="w-7 h-7 rounded border border-slate-700/80 shadow-md flex-shrink-0 object-cover bg-slate-800"
+                             onerror="this.style.display='none';">
+                        <span class="text-xs sm:text-sm font-bold text-slate-200 truncate" title="{{ $camp['champion_name'] }}">{{ $camp['champion_name'] }}</span>
+                    </div>
+
+                    <div class="mt-1 space-y-0.5">
+                        <div class="flex justify-between text-[11px]">
+                            <span class="text-slate-500">Jogos:</span>
+                            <span class="text-slate-300 font-semibold">{{ $camp['total_jogos'] }}</span>
+                        </div>
+                        <div class="flex justify-between text-[11px]">
+                            <span class="text-slate-500">Winrate:</span>
+                            <span class="font-bold {{ $camp['winrate'] >= 55 ? 'text-emerald-400' : ($camp['winrate'] < 50 ? 'text-red-400' : 'text-amber-400') }}">
+                                {{ $camp['winrate'] }}%
+                            </span>
+                        </div>
+                        <div class="flex justify-between text-[11px] pt-1 mt-1 border-t border-slate-900">
+                            <span class="text-slate-500">KDA:</span>
+                            <span class="text-indigo-400 font-bold">{{ $camp['kda'] }}</span>
+                        </div>
+                        <div class="text-[9px] text-slate-600 text-center pt-0.5">
+                            {{ $camp['avg_kills'] }}/{{ $camp['avg_deaths'] }}/{{ $camp['avg_assists'] }}
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <p class="col-span-full text-xs text-slate-500 italic py-4">Sincronize as contas acima para alimentar o relatório consolidado de campeões.</p>
+            @endforelse
+        </div>
+    </div>
+
+    <div class="mt-6 pt-4 border-t border-slate-800/40 flex justify-between items-center text-[10px] text-slate-600">
+        <span>Dados processados via Elo Engine unificada</span>
+        <span>Corte GM Estimado (BR): <strong class="text-rose-500/70">{{ !empty($gmCutoff) ? $gmCutoff . ' LP' : '---' }}</strong></span>
     </div>
 </div>
 

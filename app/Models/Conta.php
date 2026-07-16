@@ -30,4 +30,10 @@ class Conta extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    // Adiciona esta relação dentro da classe Conta
+    public function partidas()
+    {
+        return $this->hasMany(Partida::class);
+    }
 }

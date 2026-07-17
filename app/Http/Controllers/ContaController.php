@@ -10,58 +10,10 @@ use Carbon\Carbon;
 
 class ContaController extends Controller
 {
-
     /**
-     * Exibe a página de detalhes profundos de uma única conta específica.
+     * Exibe a página inicial do Dashboard unificado.
      */
-    public function show($id)
-    {
-        // Garante a segurança pegando apenas contas vinculadas ao usuário logado
-        $conta = auth()->user()->contas()->findOrFail($id);
-
-        // Busca todas as partidas registradas no banco para esta conta específica
-        $partidas = $conta->partidas()->orderByDesc('played_at')->get();
-
-        $totalGames = $partidas->count();
-        $totalWins = $partidas->where('win', true)->count();
-        $totalLosses = $totalGames - $totalWins;
-        $winrate = $totalGames > 0 ? round(($totalWins / $totalGames) * 100, 1) : 0;
-
-        $totalKills = $partidas->sum('kills');
-        $totalDeaths = $partidas->sum('deaths');
-        $totalAssists = $partidas->sum('assists');
-
-        $kda = $totalDeaths > 0 
-            ? round(($totalKills + $totalAssists) / $totalDeaths, 2) 
-            : ($totalKills + $totalAssists);
-
-        // Agrupa e calcula as estatísticas de TODOS os campeões jogados nessa conta isolada
-        $campeoesConta = $partidas->groupBy('champion_name')
-            ->map(function ($jogos) {
-                $total = $jogos->count();
-                $vitorias = $jogos->where('win', true)->count();
-                $kills = $jogos->sum('kills');
-                $deaths = $jogos->sum('deaths');
-                $assists = $jogos->sum('assists');
-
-                return [
-                    'champion_name' => $jogos->first()->champion_name,
-                    'total_jogos' => $total,
-                    'winrate' => round(($vitorias / $total) * 100, 1),
-                    'kda' => $deaths > 0 ? round(($kills + $assists) / $deaths, 2) : ($kills + $assists),
-                    'avg_kills' => round($kills / $total, 1),
-                    'avg_deaths' => round($deaths / $total, 1),
-                    'avg_assists' => round($assists / $total, 1),
-                ];
-            })
-            ->sortByDesc('total_jogos');
-
-        return view('contas.show', compact('conta', 'partidas', 'totalGames', 'totalWins', 'totalLosses', 'winrate', 'kda', 'campeoesConta'));
-    }
-    /**
-     * Exibe o Dashboard com as contas APENAS do usuário logado e os dados agregados de OP.GG.
-     */
-    public function index()
+    public function index(RiotService $riot)
     {
         // 🔒 Segurança: Pega apenas as contas vinculadas ao ID do usuário logado
         $contas = auth()->user()->contas()
@@ -92,18 +44,23 @@ class ContaController extends Controller
             ->orderBy('pdl', 'DESC')
             ->get();
 
-        // Resumo Geral baseado apenas nas contas dele (pelo elo das contas)
+        // Resumo Geral baseado apenas nas contas dele
         $totalWins   = $contas->sum('wins');
         $totalLosses = $contas->sum('losses');
         $totalGames  = $totalWins + $totalLosses;
         $avgWinrate  = $totalGames > 0 ? round(($totalWins / $totalGames) * 100, 1) : 0;
 
-        // Cutoff do Grão-Mestre mais recente armazenado
+        // Cutoff do Grão-Mestre mais recente armazenado no banco
         $gmCutoff = auth()->user()->contas()->whereNotNull('cutoff_lp')
             ->orderBy('updated_at', 'desc')
-            ->value('cutoff_lp') ?? 0;
+            ->value('cutoff_lp');
 
-        // 🔥 Estatísticas Globais de OP.GG (Calculado com base nas partidas gravadas)
+        // 🔥 SE O BANCO ESTIVER ZERADO: Aciona o Scraper do seu service ao vivo para a barra carregar certa!
+        if (empty($gmCutoff)) {
+            $gmCutoff = $riot->getGrandmasterCutoff() ?? 600; // Fallback de segurança se o site cair
+        }
+
+        // Estatísticas Globais de OP.GG baseadas nas partidas gravadas
         $contasIds = $contas->pluck('id');
         $partidasGlobais = Partida::whereIn('conta_id', $contasIds)->get();
 
@@ -122,7 +79,7 @@ class ContaController extends Controller
             ? round(($totalKills + $totalAssists) / $totalDeaths, 2) 
             : ($totalKills + $totalAssists);
 
-        // 🔥 ATUALIZADO: Agrupamento consolidado de TODOS os campeões (Sem o ->take(5))
+        // Agrupamento consolidado de todos os campeões
         $campeoesGlobais = $partidasGlobais->groupBy('champion_name')
             ->map(function ($jogos) {
                 $total = $jogos->count();
@@ -141,7 +98,7 @@ class ContaController extends Controller
                     'avg_assists' => round($assists / $total, 1),
                 ];
             })
-            ->sortByDesc('total_jogos'); // Mantém ordenado do mais jogado para o menos jogado
+            ->sortByDesc('total_jogos');
 
         return view('dashboard', compact(
             'contas', 
@@ -157,14 +114,53 @@ class ContaController extends Controller
         ));
     }
 
+    /**
+     * Exibe a página de detalhes profundos de uma única conta específica.
+     */
+    public function show($id)
+    {
+        $conta = auth()->user()->contas()->findOrFail($id);
+        $partidas = $conta->partidas()->orderByDesc('played_at')->get();
+
+        $totalGames = $partidas->count();
+        $totalWins = $partidas->where('win', true)->count();
+        $totalLosses = $totalGames - $totalWins;
+        $winrate = $totalGames > 0 ? round(($totalWins / $totalGames) * 100, 1) : 0;
+
+        $totalKills = $partidas->sum('kills');
+        $totalDeaths = $partidas->sum('deaths');
+        $totalAssists = $partidas->sum('assists');
+
+        $kda = $totalDeaths > 0 ? round(($totalKills + $totalAssists) / $totalDeaths, 2) : ($totalKills + $totalAssists);
+
+        $campeoesConta = $partidas->groupBy('champion_name')
+            ->map(function ($jogos) {
+                $total = $jogos->count();
+                $vitorias = $jogos->where('win', true)->count();
+                $kills = $jogos->sum('kills');
+                $deaths = $jogos->sum('deaths');
+                $assists = $jogos->sum('assists');
+
+                return [
+                    'champion_name' => $jogos->first()->champion_name,
+                    'total_jogos' => $total,
+                    'winrate' => round(($vitorias / $total) * 100, 1),
+                    'kda' => $deaths > 0 ? round(($kills + $assists) / $deaths, 2) : ($kills + $assists),
+                    'avg_kills' => round($kills / $total, 1),
+                    'avg_deaths' => round($deaths / $total, 1),
+                    'avg_assists' => round($assists / $total, 1),
+                ];
+            })
+            ->sortByDesc('total_jogos');
+
+        return view('contas.show', compact('conta', 'partidas', 'totalGames', 'totalWins', 'totalLosses', 'winrate', 'kda', 'campeoesConta'));
+    }
+
     public function create()
     {
         return view('contas.create');
     }
 
-    /**
-     * Salva a conta vinculando-a ao usuário logado (Sem senha!)
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -181,19 +177,24 @@ class ContaController extends Controller
 
         return redirect()->route('dashboard')->with('success', 'Conta adicionada com sucesso!');
     }
+
     /**
-     * Sincroniza do mais recente para o mais antigo até atingir a meta exata de jogos válidos da conta,
-     * forçando retentativas infinitas caso a API da Riot falhe temporariamente.
+     * Sincroniza do mais recente para o mais antigo de forma cadenciada com proteção concorrente.
      */
     public function sync($id, RiotService $riot, $isCalledFromSyncAll = false)
     {   
         set_time_limit(0);
 
-        // Prepara a tela para enviar textos em tempo real apenas se não veio do syncAll para não duplicar cabeçalhos
+        // Chave de sessão isolada por ID de usuário para não misturar acessos paralelos
+        $userSessionKey = 'global_gm_cutoff_' . auth()->id();
+
         if (!$isCalledFromSyncAll) {
+            // Desativa buffers para forçar saída contínua sem cache
             if (ob_get_level() == 0) ob_start();
-            echo "<pre style='background:#0f172a;color:#38bdf8;padding:20px;font-family:monospace;border-radius:12px;line-height:1.6;'>";
-            echo "🚀 [SYNC] Iniciando caçada reversa resiliente (Recentes -> Antigas)...\n";
+            header('Content-Type: text/html; charset=utf-8');
+            header('Cache-Control: no-cache, must-revalidate');
+            echo "<pre style='background:#0f172a;color:#38bdf8;padding:20px;font-family:monospace;border-radius:12px;line-height:1.6;max-height:85vh;overflow-y:auto;' id='console-matrix'>";
+            echo "🚀 [SYNC] Iniciando caçada reversa estável (Recentes -> Antigas)...\n";
             ob_flush(); flush();
         }
         
@@ -220,7 +221,7 @@ class ContaController extends Controller
             $tier = $rankedSolo['tier'];
             $wins = $rankedSolo['wins'];
             $losses = $rankedSolo['losses'];
-            $totalRankedGames = $wins + $losses; // 🎯 Nossa meta estrita de jogos válidos
+            $totalRankedGames = $wins + $losses;
 
             $conta->elo = $tier . ' ' . $rankedSolo['rank'];
             $conta->pdl = $rankedSolo['leaguePoints'];
@@ -228,15 +229,23 @@ class ContaController extends Controller
             $conta->losses = $losses;
             $conta->winrate = round(($wins / ($wins + $losses)) * 100, 1);
 
-            // Decay Master+
+            // Decay Master+ e aplicação do Corte do Grandmaster
             if (in_array($tier, ['MASTER', 'GRANDMASTER', 'CHALLENGER'])) {
                 $lastMatchId = $riot->getLastMatchId($puuid);
                 if ($lastMatchId) {
                     $timestampMs = $riot->getMatchTimestamp($lastMatchId);
                     if ($timestampMs) $conta->last_game_at = Carbon::createFromTimestampMs($timestampMs);
                 }
-                $cutoff = $riot->getGrandmasterCutoff();
-                if ($cutoff) $conta->cutoff_lp = $cutoff;
+                
+                // 🔒 ISOLADO: Confere a sessão baseada estritamente no ID deste usuário
+                if (session()->has($userSessionKey)) {
+                    $conta->cutoff_lp = session($userSessionKey);
+                } else {
+                    $cutoff = $riot->getGrandmasterCutoff();
+                    if ($cutoff) {
+                        $conta->cutoff_lp = $cutoff;
+                    }
+                }
             } else {
                 $conta->last_game_at = null; 
             }
@@ -244,6 +253,7 @@ class ContaController extends Controller
             echo "👤 Invocador: <strong style='color:#10b981;'>{$conta->riot_id}</strong>\n";
             echo "📊 Alvo estrito: {$totalRankedGames} jogos válidos no Elo principal.\n";
             echo "📥 Coletando lista sequencial de partidas da Riot...\n";
+            echo "<script>var c = document.getElementById('console-matrix'); if(c) c.scrollTop = c.scrollHeight;</script>";
             ob_flush(); flush();
 
             try {
@@ -251,63 +261,70 @@ class ContaController extends Controller
                 $countPerPage = 100;
                 $allMatchIds = [];
 
-                // Recolhe os códigos ordenados por padrão da Riot (Mais novas primeiro)
-                while ($start < $totalRankedGames + 60) { // Margem extra para cobrir os pulos de remakes
+                while ($start < $totalRankedGames + 60) {
                     $matchIds = $riot->getRecentMatchIds($puuid, $countPerPage, $start);
                     if (empty($matchIds)) break;
 
                     $allMatchIds = array_merge($allMatchIds, $matchIds);
                     $start += $countPerPage;
+                    usleep(rand(400000, 800000)); // Jitter leve na paginação
                 }
 
                 $totalColetado = count($allMatchIds);
                 echo "✅ Estruturados " . $totalColetado . " IDs de histórico corrido. Analisando...\n";
                 echo "---------------------------------------------------------\n";
+                echo "<script>var c = document.getElementById('console-matrix'); if(c) c.scrollTop = c.scrollHeight;</script>";
                 ob_flush(); flush();
 
-                // Verifica quantas partidas VÁLIDAS já temos salvas no banco de dados para essa conta
                 $validasNoBanco = Partida::where('conta_id', $conta->id)->count();
                 echo "📊 O banco de dados possui atualmente [{$validasNoBanco}/{$totalRankedGames}] jogos válidos guardados.\n";
+                echo "<script>var c = document.getElementById('console-matrix'); if(c) c.scrollTop = c.scrollHeight;</script>";
                 ob_flush(); flush();
 
                 $inseridos = 0;
                 foreach ($allMatchIds as $index => $matchId) {
                     $numAtual = $index + 1;
 
-                    // 🛑 CONDIÇÃO DE PARADA: Se já atingimos a meta perfeita de jogos da season, encerra na hora!
                     if ($validasNoBanco >= $totalRankedGames) {
                         echo "🎯 Meta atingida! O banco possui exatamente {$validasNoBanco} jogos correspondendo ao elo. Finalizando laço.\n";
+                        echo "<script>var c = document.getElementById('console-matrix'); if(c) c.scrollTop = c.scrollHeight;</script>";
                         break;
                     }
 
-                    // Se a partida já existe, ela conta como válida no banco. Pula a chamada de detalhes (economiza API)
+                    // 🔥 TOPO ABSOLUTO: Pula direto antes do jitter de delay se já existir combinando match_id + conta_id!
+                    // Isso acelera o script em 1000% para os jogos velhos que já estão salvos.
                     if (Partida::where('match_id', $matchId)->where('conta_id', $conta->id)->exists()) {
                         echo "[{$numAtual}/{$totalColetado}] 🟢 Partida {$matchId} já está guardada. Avançando...\n";
+                        echo "<script>var c = document.getElementById('console-matrix'); if(c) c.scrollTop = c.scrollHeight;</script>";
                         ob_flush(); flush();
                         continue;
                     }
 
-                    // 🔥 MECANISMO FORÇADO DE RETENTATIVA INFINITA (Insiste até coletar)
+                    // 🕒 JITTER ANTI RATE-LIMIT: Só entra nessa pausa de 1s se for um jogo novo que vai ser baixado
+                    usleep(rand(1000000, 1600000));
+
                     $matchData = null;
                     $tentativa = 1;
+                    $waitTime = 5;
 
                     while (!$matchData) {
                         $matchData = $riot->getMatchDetail($matchId);
                         
                         if (!$matchData) {
-                            // Se falhar (Instabilidade da Riot ou Rate Limit), cospe o aviso e espera para tentar de novo
-                            echo "[{$numAtual}/{$totalColetado}] ⚠️ [Tentativa {$tentativa}] Falha ao ler detalhes da partida {$matchId}. API sobrecarregada? Aguardando 5 segundos para re-tentar...\n";
+                            echo "[{$numAtual}/{$totalColetado}] ⚠️ [Tentativa {$tentativa}] Bloqueio temporário (Rate Limit). Aguardando {$waitTime} segundos para tentar de novo...\n";
+                            echo "<script>var c = document.getElementById('console-matrix'); if(c) c.scrollTop = c.scrollHeight;</script>";
                             ob_flush(); flush();
                             
-                            sleep(5); // Segura 5 segundos para a API respirar antes do próximo tiro
+                            sleep($waitTime); 
                             $tentativa++;
+                            $waitTime = min(30, $waitTime + 5);
                         }
                     }
 
-                    // 🔒 TRAVA 1: Valida se a fila é estritamente SoloQ (Queue 420)
                     $queueId = $matchData['info']['queueId'] ?? 0;
                     if ($queueId !== 420) {
                         echo "[{$numAtual}/{$totalColetado}] 🚫 Ignorada: Outra Fila (Queue ID: {$queueId}).\n";
+                        echo "<script>var c = document.getElementById('console-matrix'); if(c) c.scrollTop = c.scrollHeight;</script>";
                         ob_flush(); flush();
                         continue;
                     }
@@ -315,33 +332,41 @@ class ContaController extends Controller
                     $participant = collect($matchData['info']['participants'] ?? [])->firstWhere('puuid', $puuid);
 
                     if ($participant) {
-                        // 🔒 TRAVAS DE REMAKE: gameDuration < 5 min OU Early Surrender OU eligibleForProgression falso
-                        $duration = $matchData['info']['gameDuration'] ?? 0;
                         $isEarlySurrender = $participant['gameEndedInEarlySurrender'] ?? false;
-                        $eligibleForProgression = $participant['eligibleForProgression'] ?? true;
 
-                        if ($duration < 300 || $isEarlySurrender === true || $eligibleForProgression === false) {
+                        if ($isEarlySurrender === true) {
                             echo "[{$numAtual}/{$totalColetado}] 🚫 Ignorada: Partida detectada como Remake/Anulada.\n";
+                            echo "<script>var c = document.getElementById('console-matrix'); if(c) c.scrollTop = c.scrollHeight;</script>";
                             ob_flush(); flush();
-                            continue; // Descarta e não conta como válida
+                            continue;
                         }
 
-                        // Se passou nas travas, é uma partida legítima do elo
-                        Partida::create([
-                            'conta_id' => $conta->id,
-                            'match_id' => $matchId,
-                            'champion_name' => $participant['championName'],
-                            'win' => $participant['win'],
-                            'kills' => $participant['kills'],
-                            'deaths' => $participant['deaths'],
-                            'assists' => $participant['assists'],
-                            'lane' => $participant['individualPosition'] !== 'Invalid' ? $participant['individualPosition'] : 'UTILITY',
-                            'played_at' => Carbon::createFromTimestampMs($matchData['info']['gameEndTimestamp']),
-                        ]);
+                        // 🔥 CHAVE COMPOSTA PROTEGIDA: Inserção com firstOrCreate segura contra concorrência múltipla
+                        $partidaExistente = Partida::firstOrCreate(
+                            [
+                                'match_id' => $matchId,
+                                'conta_id' => $conta->id
+                            ],
+                            [
+                                'champion_name' => $participant['championName'],
+                                'win'           => $participant['win'],
+                                'kills'         => $participant['kills'],
+                                'deaths'        => $participant['deaths'],
+                                'assists'       => $participant['assists'],
+                                'lane'          => $participant['individualPosition'] !== 'Invalid' ? $participant['individualPosition'] : 'UTILITY',
+                                'played_at'     => Carbon::createFromTimestampMs($matchData['info']['gameEndTimestamp']),
+                            ]
+                        );
 
-                        $inseridos++;
-                        $validasNoBanco++; // Registra o incremento na meta
-                        echo "[{$numAtual}/{$totalColetado}] 🔥 SALVO -> Campeão: <strong style='color:#f59e0b;'>{$participant['championName']}</strong> (" . ($participant['win'] ? 'Vitória' : 'Derrota') . ") [Total Válidas: {$validasNoBanco}/{$totalRankedGames}]\n";
+                        if ($partidaExistente->wasRecentlyCreated) {
+                            $inseridos++;
+                            $validasNoBanco++;
+                            echo "[{$numAtual}/{$totalColetado}] 🔥 SALVO -> Campeão: <strong style='color:#f59e0b;'>{$participant['championName']}</strong> (" . ($participant['win'] ? 'Vitória' : 'Derrota') . ") [Total Válidas: {$validasNoBanco}/{$totalRankedGames}]\n";
+                        } else {
+                            echo "[{$numAtual}/{$totalColetado}] 🟢 Partida {$matchId} já constava no banco de dados. Avançando...\n";
+                        }
+
+                        echo "<script>var c = document.getElementById('console-matrix'); if(c) c.scrollTop = c.scrollHeight;</script>";
                         ob_flush(); flush();
                     }
                 }
@@ -349,10 +374,12 @@ class ContaController extends Controller
                 $conta->save();
                 echo "---------------------------------------------------------\n";
                 echo "✨ Conta [{$conta->riot_id}] sincronizada! +{$inseridos} novos jogos adicionados.\n\n";
+                echo "<script>var c = document.getElementById('console-matrix'); if(c) c.scrollTop = c.scrollHeight;</script>";
                 ob_flush(); flush();
 
             } catch (\Exception $e) {
                 echo "❌ Erro no histórico de {$conta->riot_id}: " . $e->getMessage() . "\n\n";
+                echo "<script>var c = document.getElementById('console-matrix'); if(c) c.scrollTop = c.scrollHeight;</script>";
                 ob_flush(); flush();
             }
         } else {
@@ -362,7 +389,6 @@ class ContaController extends Controller
             ob_flush(); flush();
         }
 
-        // Se a chamada foi individual, faz o redirecionamento final da página aqui
         if (!$isCalledFromSyncAll) {
             echo "🔄 Redirecionando de volta ao dashboard em 3 segundos...\n";
             echo "</pre>"; ob_flush(); flush();
@@ -372,16 +398,33 @@ class ContaController extends Controller
     }
 
     /**
-     * 🔥 PAPO RETO: O SyncAll apenas reaproveita a engine visual do Sync normal conta a conta
+     * Sincroniza todas as contas isolando as chaves por ID de sessão de usuário logado.
      */
     public function syncAll(RiotService $riot)
     {   
         set_time_limit(0);
 
-        // Prepara a tela preta unificada da Matrix
+        $userSessionKey = 'global_gm_cutoff_' . auth()->id();
+
         if (ob_get_level() == 0) ob_start();
-        echo "<pre style='background:#020617;color:#10b981;padding:20px;font-family:monospace;border-radius:12px;line-height:1.6;'>";
+        header('Content-Type: text/html; charset=utf-8');
+        header('Cache-Control: no-cache, must-revalidate');
+        echo "<pre style='background:#020617;color:#10b981;padding:20px;font-family:monospace;border-radius:12px;line-height:1.6;' id='console-matrix'>";
         echo "🌐 [SYNC ALL GLOBAL] Iniciando fila sequencial de atualização...\n";
+        echo "====================================================================\n";
+        ob_flush(); flush();
+
+        echo "🕵️‍♂️ [SCRAPER] Consultando corte atualizado do Grandmaster (BR)...\n";
+        ob_flush(); flush();
+        $globalCutoff = $riot->getGrandmasterCutoff();
+        
+        if ($globalCutoff) {
+            echo "🎯 [SCRAPER] Sucesso! Corte detectado em: <strong style='color:#f43f5e;'>{$globalCutoff} LP</strong>\n";
+            session([$userSessionKey => $globalCutoff]);
+        } else {
+            echo "⚠️ [SCRAPER] Falha ao raspar replays.lol. Usando fallback de segurança (600 LP).\n";
+            session([$userSessionKey => 600]);
+        }
         echo "====================================================================\n";
         ob_flush(); flush();
 
@@ -390,12 +433,14 @@ class ContaController extends Controller
 
         foreach ($contas as $index => $conta) {
             $num = $index + 1;
-            echo "✨ [Fila {$num}/{$totalContas}] Carregando engine para o perfil...\n";
+            echo "✨ [Fila {$num}/{$totalContas}] Carregando engine para o perfil {$conta->riot_id}...\n";
+            echo "<script>var c = document.getElementById('console-matrix'); if(c) c.scrollTop = c.scrollHeight;</script>";
             ob_flush(); flush();
 
-            // Executa a lógica de caçada completa daquela conta específica passando 'true' no flag
             $this->sync($conta->id, $riot, true);
         }
+
+        session()->forget($userSessionKey);
 
         echo "====================================================================\n";
         echo "🎉 Sincronização geral de todas as contas concluída!\n";

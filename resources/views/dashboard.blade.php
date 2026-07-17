@@ -45,18 +45,20 @@
             ];
             $colorClass = $eloColors[$tier] ?? 'from-slate-700 to-slate-600 text-slate-400';
 
-            // Cálculo da barra de progresso
+            // 🔥 CORREÇÃO DO BUG: Cálculo matemático dinâmico usando o cutoff_lp salvo da API
             $percent = 0;
             if($elo !== 'UNRANKED') {
                 if(!in_array($tierUpper, ['MASTER','GRANDMASTER','CHALLENGER'])) {
                     $percent = min(100, ($pdl / 100) * 100);
                 } elseif($tierUpper === 'MASTER') {
-                    $cutoff = $conta->cutoff_lp ?? 600;
-                    $percent = min(100, ($pdl / max(1, $cutoff)) * 100);
+                    // Pega o corte do GM que buscamos na API (Padrão 600 se falhar)
+                    $cutoffGM = $conta->cutoff_lp ?? 600;
+                    $percent = min(100, ($pdl / max(1, $cutoffGM)) * 100);
                 } elseif($tierUpper === 'GRANDMASTER') {
-                    $gmCutoff = $conta->cutoff_lp ?? 600;
-                    $challCutoff = $gmCutoff + 400;
-                    $percent = min(100, max(0, (($pdl - $gmCutoff) / max(1, $challCutoff - $gmCutoff)) * 100));
+                    // Para o GM, o progresso vai de onde começa o GM até o corte do Desafiante (+400 LP acima)
+                    $cutoffGM = $conta->cutoff_lp ?? 600;
+                    $challCutoff = $cutoffGM + 400;
+                    $percent = min(100, max(0, (($pdl - $cutoffGM) / max(1, $challCutoff - $cutoffGM)) * 100));
                 } elseif($tierUpper === 'CHALLENGER') {
                     $percent = 100;
                 }
@@ -324,7 +326,7 @@
 
     <div class="mt-6 pt-4 border-t border-slate-800/40 flex justify-between items-center text-[10px] text-slate-600">
         <span>Dados processados via Elo Engine unificada</span>
-        <span>Corte GM Estimado (BR): <strong class="text-rose-500/70">{{ !empty($gmCutoff) ? $gmCutoff . ' LP' : '---' }}</strong></span>
+        <span>Corte GM Estimado (BR): <strong class="text-rose-400 font-bold">{{ !empty($gmCutoff) ? $gmCutoff . ' LP' : '---' }}</strong></span>
     </div>
 </div>
 

@@ -50,26 +50,22 @@ class RiotService
     }
 
     // ✅ PASSO 3 — Scraper do Cutoff do Grandmaster
-    public function getGrandmasterCutoff()
-    {
-        $response = Http::get(
-            'https://www.replays.lol/cutoff/BR/grandmaster'
-        );
+ public function getGrandmasterCutoff()
+{
+    $response = Http::get(
+        'https://www.replays.lol/cutoff/BR/grandmaster'
+    );
 
-        if ($response->failed()) {
-            return null;
-        }
+    $html = $response->body();
 
-        $html = $response->body();
+    // ✅ remove comentários HTML do React
+    $html = preg_replace('/<!--.*?-->/', '', $html);
 
-        // remove comentários HTML do React
-        $html = preg_replace('//', '', $html);
+    // ✅ agora captura o número corretamente
+    preg_match('/(\d+)\s*LP/i', $html, $matches);
 
-        // agora captura o número corretamente
-        preg_match('/(\d+)\s*LP/i', $html, $matches);
-
-        return isset($matches[1]) ? (int)$matches[1] : null;
-    }
+    return isset($matches[1]) ? (int)$matches[1] : null;
+}
 
     // ✅ PASSO 4 — PUUID → Pegar ID do último jogo Ranqueado Solo (Queue 420)
     public function getLastMatchId($puuid)

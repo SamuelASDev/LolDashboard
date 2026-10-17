@@ -25,3 +25,4 @@ Thumbs.db
 
 /playwright-report
 /test-results
+/storage/framework/cron-worker.lock

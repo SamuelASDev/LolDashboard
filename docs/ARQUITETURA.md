@@ -1,5 +1,9 @@
 # Arquitetura e decisões
 
+## Entrada CLI para worker temporário
+
+scripts/cron-worker.php é uma entrada PHP CLI para hospedagem com disparos periódicos. Usa caminhos relativos ao próprio arquivo, sem montar comandos shell, e chama queue:work pelo Console Kernel com conexão/fila de configuração. Um lock de arquivo PHP não bloqueante em storage/framework/cron-worker.lock abrange bootstrap e execução; processos sobrepostos saem sem consumir jobs. O sistema operacional libera o lock quando o processo termina. Esse lock não substitui as travas existentes por execução/partida ou o cache compartilhado. O modo --check valida a inicialização sem processar fila. Scheduler permanece separado. Falhas não imprimem mensagens/traces de exceções potencialmente sensíveis; guard CLI recusa HTTP.
+
 ## Organização
 
 O projeto continua um monólito Laravel com Blade. A modularização acompanha responsabilidades reais, sem duplicar o Eloquent com repositórios genéricos.

@@ -239,7 +239,7 @@ resources/
 routes/              Web, autenticação e agenda
 scripts/             Inicialização local e atualização de assets
 tests/               PHP, JavaScript e navegador
-docs/                Arquitetura, operação, revisão e diário
+docs/                Documentação de operação
 ```
 
 O cache compartilhado evita baixar novamente uma partida já importada. Projeções pessoais continuam vinculadas à conta; anotações pertencem ao usuário. Não existe rota pública para consultar livremente o cache por ID.
@@ -272,7 +272,7 @@ O Playwright prepara exclusivamente `storage/framework/testing/browser.sqlite`, 
 
 Execute testes PHP e compilação/limpeza Blade antes dos testes de navegador, sem concorrência entre eles: no Windows, os processos podem disputar views compiladas. Os testes usam o build, isolado do arquivo hot do Vite local.
 
-O workflow [Quality](.github/workflows/ci.yml) está configurado para pushes em `dev`/`main` e pull requests: testes, build, Pint, cache de rotas e auditorias. Resultados históricos não substituem execução no checkout atual. `docs/auditorias/` preserva diagnósticos antigos, fora da suíte normal de regressão.
+O workflow [Quality](.github/workflows/ci.yml) está configurado para pushes em `dev`/`main` e pull requests: testes, build, Pint, cache de rotas e auditorias.
 
 ## Publicação e atualização
 
@@ -315,14 +315,11 @@ Consulte os logs sem publicar credenciais, links privados de verificação ou da
 
 Use `dev` para desenvolvimento e `main` para a versão integrada. Faça mudanças pequenas, descreva a motivação e execute verificações proporcionais ao que mudou.
 
-Antes de alterar, leia [AGENTS.md](AGENTS.md) e o [diário completo](docs/DIARIO_DO_PROJETO.md). Registre mudanças no diário, preserve isolamento e simule integrações nos testes. Não versione `.env`, chaves, dumps, dados pessoais, `vendor/`, `node_modules/` ou fixtures geradas.
+Antes de alterar, consulte a documentação de operação, preserve o isolamento por usuário e simule integrações nos testes. Não versione `.env`, chaves, dumps, dados pessoais, `vendor/`, `node_modules/` ou fixtures geradas.
 
 | Documento | Conteúdo |
 | --- | --- |
-| [Arquitetura](docs/ARQUITETURA.md) | Organização, sincronização e decisões técnicas |
 | [Operação](docs/OPERACAO.md) | Instalação, atualização, configuração e recuperação |
-| [Diário](docs/DIARIO_DO_PROJETO.md) | Histórico, verificações e limitações |
-| [Revisão de 17/10/2026](docs/REVISAO_2026-10-17.md) | Diagnóstico, correções e pendências de homologação |
 
 ## Licença e créditos
 

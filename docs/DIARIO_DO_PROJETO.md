@@ -666,3 +666,43 @@ Snapshots atuais: [Composer](auditorias/2026-10-16-pos-refatoracao-composer.json
 - Achados atualizados (IDs e status): documentação pública atualizada; nenhum novo achado funcional. Mantidas pendências de homologação Hostinger/carga/restauração das entradas anteriores.
 - Limitações e pendências: comandos de instalação são instruções revisadas, não uma nova instalação executada. Testes PHP/JavaScript/browser, build e auditorias não repetidos por ser alteração exclusivamente documental; a Entrada 025 registra a última suíte PHP de 177 testes aprovados. Publicação segue commit/push dev e merge/push main, sem force push; isso não realiza deploy.
 - Próximo passo recomendado: consultar README/LICENSE no repositório e continuar a configuração guiada da Hostinger.
+
+### 2026-10-17 — Entrada 027: configuração local de e-mail de confirmação
+
+- Objetivo: configurar o transporte de e-mail local usando os dados fornecidos pelo usuário, que também configurará a hospedagem.
+- Alterações e justificativa: variáveis de e-mail ajustadas exclusivamente no .env ignorado, usando SMTP autenticado com TLS implícito e remetente fornecido. MAIL_URL neutralizada para não sobrepor os campos individuais. Cache de configuração limpo. Nenhuma credencial foi copiada para documentação, testes, arquivos versionados ou resposta.
+- Arquivos afetados: .env local não versionado e este diário. config/mail.php já suporta o esquema solicitado e não precisou mudar.
+- Verificações executadas e resultados: .env confirmado como ignorado; bootstrap real validou esquema, porta, presença de credencial, remetente e construção do transporte sem expor seus valores. Sete testes de confirmação de e-mail/recuperação de senha aprovados, 14 assertions, com notificações de teste. Script temporário de verificação removido.
+- Achados atualizados (IDs e status): transporte local configurado; entrega real ainda não homologada. A senha compartilhada na conversa deve ser substituída pelo proprietário no provedor e nos ambientes configurados.
+- Limitações e pendências: não houve conexão/autenticação SMTP real nem envio de e-mail; nenhum destinatário foi solicitado. Sem alteração na hospedagem, deploy ou publicação de credenciais. Worker persistente requer reinício normal caso precise carregar a nova configuração; links de produção exigem APP_URL do domínio correto.
+- Próximo passo recomendado: configurar o .env da hospedagem, conferir APP_URL e usar o fluxo de cadastro/reenvio para verificar entrega real no destinatário autorizado.
+
+### 2026-10-17 — Entrada 028: orientação de cron para hospedagem
+
+- Objetivo: orientar configuração do scheduler e processamento da fila Riot por cron na hospedagem Business.
+- Alterações e justificativa: análise do código atual, sem alterar agenda/jobs/configuração. Confirmados scheduler de recuperação a cada cinco minutos e cortes às 03:10 de Brasília; ambos dependem de schedule:run. A fila database/riot exige execução separada. Proposta de dois disparos por minuto, scheduler e worker temporário com stop-when-empty/max-time, protegendo o worker contra sobreposição com flock se disponível.
+- Arquivos afetados: somente este diário. Preservada a entrada de configuração SMTP anterior, ainda não publicada.
+- Verificações executadas e resultados: lidos routes/console.php, config/riot.php, config/queue.php, RecoverSyncs e SyncAccount; flags conferidas no WorkCommand da versão instalada do Laravel. Consultada documentação oficial atual da Hostinger sobre Cron Jobs (tipo Custom e agenda UTC). Nenhum comando executado no servidor remoto.
+- Achados atualizados (IDs e status): operação de cron ainda depende de homologação; não se presume disponibilidade de flock nem caminho/versão do PHP na conta do usuário.
+- Limitações e pendências: falta obter caminho absoluto contendo artisan, binário PHP CLI e disponibilidade de flock; falta testar cron, limites de duração do provedor e processamento real da fila. max-time é verificado entre jobs e não interrompe rigidamente um job em andamento. Sem nova suíte/build por ser apenas orientação operacional.
+- Próximo passo recomendado: coletar pwd, command -v php, php -v e command -v flock via SSH na pasta do projeto; preencher e testar os comandos antes de cadastrar as tarefas no hPanel. Fonte: https://www.hostinger.com/support/1583465-how-to-set-up-a-cron-job-at-hostinger/.
+
+### 2026-10-17 — Entrada 029: diagnóstico de espera pelo worker na hospedagem
+
+- Objetivo: investigar o relato de que a sincronização permanece aguardando o worker após cadastro das crons.
+- Alterações e justificativa: apenas análise; nenhuma modificação de aplicação ou configuração remota. StartSync grava a mensagem inicial antes do dispatch na conexão Riot e fila riot. A agenda sozinha não consome essa fila. Orientado conferir a saída da segunda cron e executar um único job via SSH para distinguir falha de cron/flock/caminho/PHP de falha no Laravel.
+- Arquivos afetados: somente este diário; preservados os registros locais anteriores de SMTP e cron.
+- Verificações executadas e resultados: revalidados StartSync, SyncAccount, SyncController e conexão database. Não houve acesso à hospedagem, execução de jobs reais ou consumo da chave Riot pelo agente.
+- Achados atualizados (IDs e status): causa remota ainda não determinada; não declarar falha de flock ou da API sem a saída do servidor.
+- Limitações e pendências: aguardar resultado do worker manual ou saída da cron. Testes/build não repetidos porque nenhum código foi alterado.
+- Próximo passo recomendado: confirmar espera de ao menos um disparo por minuto, executar config:clear e queue:work database --queue=riot --once pelo PHP CLI correto na pasta do projeto e compartilhar apenas o resultado sem segredos.
+
+### 2026-10-17 — Entrada 030: arquivo PHP dedicado à cron do worker
+
+- Objetivo: permitir configurar a fila por arquivo PHP curto no hPanel após o usuário reportar que flock foi passado incorretamente como comando do Artisan.
+- Alterações e justificativa: criado scripts/cron-worker.php, somente CLI, com raiz baseada no próprio caminho, bootstrap Laravel e chamada estruturada ao Console Kernel. Lê conexão/fila de configuração e executa worker temporário (stop-when-empty, max-time 50, sleep 1, tries 3, timeout 90). Usa flock nativo do PHP sobre arquivo local, sem executável shell nem proc_open; ignora sobreposição e libera lock em finally/término do processo. --check inicializa e valida sem consumir jobs. Exceções não imprimem mensagens/traces potencialmente sensíveis. Arquivo de lock excluído pelo .gitignore. Scheduler continua em tarefa separada.
+- Arquivos afetados: scripts/cron-worker.php, tests/Feature/CronWorkerTest.php, .gitignore, README, ARQUITETURA, OPERACAO e diário. Incluídos os registros locais anteriores de configuração/orientação (Entradas 027–029), sem credenciais. .env permanece ignorado e fora da publicação.
+- Verificações executadas e resultados: dois testes de subprocesso aprovados (bootstrap sem jobs em SQLite :memory: e invocação sobreposta sem iniciar worker). Suíte completa: 179 testes aprovados, 886 assertions. Pint e lint PHP dos dois arquivos aprovados; diff --check sem erros e lock confirmado como ignorado. Nenhum job/API/e-mail real executado pelo agente. O primeiro comando tentado anteriormente pelo usuário via SSH foi concluído e a versão com flock também funcionou manualmente, conforme seu relato; o erro posterior mostra Artisan recebendo um comando shell, não prova ausência do flock no servidor.
+- Achados atualizados (IDs e status): entrada CLI e proteção contra sobreposição verificadas localmente; disparo automático no hPanel ainda pendente de atualização/configuração remota. Nenhuma alteração de schema, dependências, segredo ou histórico de partidas.
+- Limitações e pendências: lock de arquivo protege somente processos que usam este script no mesmo servidor; não substitui locks compartilhados do domínio. max-time é observado entre jobs, e limites de processo/sinais do provedor exigem homologação. Build/JS/browser não repetidos, pois interface/assets não mudaram. Publicação segue fluxo dev/main autorizado; sem deploy ou acesso remoto pelo agente.
+- Próximo passo recomendado: atualizar código na hospedagem, substituir somente a cron antiga do worker pela chamada direta ao arquivo e manter schedule:run; testar --check e depois o disparo automático a cada minuto.

@@ -192,6 +192,8 @@ npm run dev
 
 Cada comando ocupa seu próprio terminal. No PowerShell, use `npm.cmd run dev`. Se mudar a conexão da fila Riot, ajuste também o argumento do worker.
 
+Para hospedagem com cron e sem worker permanente, use `scripts/cron-worker.php`: ele inicia um worker temporário e evita sobreposição com o lock nativo do PHP, sem depender do comando shell flock. Configure sua chamada a cada minuto e mantenha outra tarefa para `artisan schedule:run`. Use `php scripts/cron-worker.php --check` para verificar bootstrap/configuração/lock sem consumir jobs. Consulte [operação](docs/OPERACAO.md) para preenchimento no hPanel e limitações.
+
 | Comando | Uso |
 | --- | --- |
 | `php artisan riot:recover` | Recuperar etapas paradas, respeitando locks e próximo horário permitido |

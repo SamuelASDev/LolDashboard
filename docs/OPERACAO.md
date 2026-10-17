@@ -48,6 +48,16 @@ Troque a conexão se necessário. Em produção, supervisione workers e configur
 
 `composer dev` inicia web/Vite/worker/scheduler para desenvolvimento; não é servidor de produção. Reinicie workers no deploy.
 
+### Worker temporário por arquivo PHP em hospedagem compartilhada
+
+O arquivo `scripts/cron-worker.php` permite executar a fila sem comando shell extenso e sem o executável flock. Aceita somente PHP CLI, encontra a raiz por __DIR__, usa lock exclusivo não bloqueante pelo flock nativo do PHP e executa queue:work com a conexão/fila de config/riot.php. O lock é liberado no término; uma invocação sobreposta sai sem iniciar outro worker. Protege disparos nesse servidor, sem substituir locks/cache compartilhados em múltiplos servidores.
+
+Configure uma tarefa a cada minuto chamando o PHP CLI com o caminho absoluto de `scripts/cron-worker.php`. No tipo Custom, informe `CAMINHO_PHP CAMINHO_PROJETO/scripts/cron-worker.php`. No tipo PHP, informe o caminho do script no campo destinado ao arquivo, sem repetir um prefixo PHP já adicionado pelo painel. Não acrescente esse caminho nem flock depois de artisan: são entradas distintas.
+
+Mantenha outra tarefa de `artisan schedule:run` a cada minuto; o script do worker não executa a agenda. Substitua a antiga tarefa do worker, evitando dois modelos de execução. storage/framework deve permitir criar o lock pelo usuário da cron. Não remova o arquivo de lock com processo ativo; ele é local e ignorado pelo Git.
+
+Verificação sem consumir jobs: `php scripts/cron-worker.php --check`. Execução efetiva: `php scripts/cron-worker.php`. O worker usa stop-when-empty, max-time=50, sleep=1, tries=3 e timeout=90; max-time é verificado entre jobs e não impõe término rígido aos 50 segundos. Sinais/timeouts e limites do provedor precisam de homologação. O arquivo fica fora de public/ e não deve ser chamado por HTTP. Falhas retornam status não zero e diagnóstico sem mensagem/trace de exceção.
+
 ## Recuperar e acompanhar
 
 - Detalhes da conta e `GET /contas/{conta}/sync` mostram progresso apenas ao dono.

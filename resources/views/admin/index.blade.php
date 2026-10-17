@@ -2,6 +2,15 @@
 @section('title', 'Usuários')
 @section('content')
 <header class="mb-8"><p class="eyebrow text-amber-400">Administração</p><h1 class="mt-2 text-3xl font-semibold tracking-tight">Usuários</h1><p class="mt-3 text-sm text-slate-400">Moderadores têm acesso de consulta. Administradores gerenciam usuários comuns e moderadores.</p></header>
+@if(auth()->user()->role === 'admin')
+<section class="panel mb-8 flex flex-wrap items-center justify-between gap-4 p-5" aria-labelledby="cutoffs-heading">
+    <div><h2 id="cutoffs-heading" class="text-lg font-semibold">Cortes de Grão-Mestre e Desafiante</h2><p class="mt-2 text-sm text-slate-400">Consulte agora os cortes Solo/Duo de todas as regiões, mesmo após a consulta do dia. A rotina diária continua às 03:10 de Brasília.</p></div>
+    <form method="POST" action="{{ route('admin.cutoffs.refresh') }}" x-data="{ submitting: false }" @submit="submitting = true" :aria-busy="submitting">
+        @csrf
+        <button type="submit" class="btn-primary" :disabled="submitting" x-text="submitting ? 'Atualizando cortes…' : 'Atualizar cortes agora'">Atualizar cortes agora</button>
+    </form>
+</section>
+@endif
 <div class="panel overflow-hidden">
     <div class="overflow-x-auto"><table class="w-full text-left text-sm"><caption class="sr-only">Usuários cadastrados</caption>
         <thead class="border-b border-slate-800 text-xs text-slate-500"><tr>@foreach(['Usuário','Contas','Permissão','Ações'] as $heading)<th scope="col" class="px-5 py-4">{{ $heading }}</th>@endforeach</tr></thead>

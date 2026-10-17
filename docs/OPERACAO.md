@@ -135,6 +135,8 @@ O scheduler executa riot:cutoffs diariamente às 03:10 de Brasília, consultando
 
 Operação manual: php artisan riot:cutoffs. Para repetir uma tentativa que falhou no mesmo dia ou conferir uma correção do parser: php artisan riot:cutoffs --force. O limite diário normal considera o dia civil de Brasília, não uma espera móvel de 24 horas. Falhas não causam repetição em cada acesso e não apagam o último valor; --force permite intervenção imediata.
 
+Pela interface, acesse **Administração → Usuários → Atualizar cortes agora** com um administrador verificado. O botão consulta ambos os cortes de todas as regiões imediatamente, inclusive se a rotina já rodou no dia, e informa o resultado ao retornar à página. Não precisa aguardar cron ou worker. Durante o envio, o botão mostra “Atualizando cortes…”. Há limite de uma tentativa por minuto por administrador e proteção contra consultas simultâneas; falhas preservam os últimos valores. A rotina diária das 03:10 continua ativa. Atualização manual e agenda normal compartilham o registro da tentativa do dia; uma consulta manual antes das 03:10 pode fazer a agenda reaproveitar essa tentativa.
+
 A fonte pode mudar sua estrutura. Em falha ou depois de 36 horas sem referência recente, o painel exibe aviso e barra em cinza. Sem valor anterior, informa indisponibilidade. Verifique fonte, rede e parser antes de forçar nova consulta; não insira números fixos para ocultar falha. Não há chamada autenticada à Riot para buscar os cortes.
 
 Ferro–Diamante mostram progresso pelas quatro divisões até o próximo elo. Mestre+ usam os valores publicados, com horário da fonte e da consulta. São referências Solo/Duo, não garantia de promoção, classificação oficial em tempo real ou cálculo de decay.

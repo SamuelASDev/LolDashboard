@@ -656,3 +656,13 @@ Snapshots atuais: [Composer](auditorias/2026-10-16-pos-refatoracao-composer.json
 - Achados atualizados (IDs e status): defeito de apresentação da Entrada 023 corrigido com reprodução e regressão; nenhuma alteração de dados, autorização, filas ou schema.
 - Limitações e pendências: navegador e auditorias não repetidos nesta correção localizada; renderização HTML real do componente exercitada pelos testes. Publicação segue o fluxo dev → main já autorizado, sem force push.
 - Próximo passo recomendado: recarregar a página local e prosseguir com a configuração da Hostinger.
+
+### 2026-10-17 — Entrada 026: licença MIT e README detalhado
+
+- Objetivo: adicionar licença MIT, explicar o projeto detalhadamente no README e publicar na dev/main conforme solicitação do usuário.
+- Alterações e justificativa: criado LICENSE com texto padrão MIT e copyright 2026 SamuelASDev, coerente com o metadado MIT já existente no composer.json. README reorganizado em 331 linhas, com índice, funcionalidades, semântica de participações/estatísticas, limites do decay, requisitos, instalação Windows/Linux, configuração, uso, regiões, sincronização/processos, administração, estrutura, testes/CI, publicação, diagnóstico, contribuição e créditos. Removida a instrução antiga que oferecia Flex; explicitados preservação do histórico, privacidade das notas, build não versionado e ausência de deploy automático Hostinger. Dependências e conteúdo de terceiros mantêm suas próprias condições.
+- Arquivos afetados: LICENSE, README.md e docs/DIARIO_DO_PROJETO.md. Sem alteração de código, schema, dependências, credenciais ou dados.
+- Verificações executadas e resultados: estado/diffs e branches conferidos; fetch sem divergências. README revalidado contra composer.json, package.json, .env.example, config/riot.php, config/workspace.php, RiotRegion, scripts/dev.php, comandos, scheduler, workflow CI e documentação técnica. composer validate --strict aprovado; UTF-8, existência dos links locais, pares de blocos de código e coerência do metadado MIT verificados por script; git diff --check aprovado.
+- Achados atualizados (IDs e status): documentação pública atualizada; nenhum novo achado funcional. Mantidas pendências de homologação Hostinger/carga/restauração das entradas anteriores.
+- Limitações e pendências: comandos de instalação são instruções revisadas, não uma nova instalação executada. Testes PHP/JavaScript/browser, build e auditorias não repetidos por ser alteração exclusivamente documental; a Entrada 025 registra a última suíte PHP de 177 testes aprovados. Publicação segue commit/push dev e merge/push main, sem force push; isso não realiza deploy.
+- Próximo passo recomendado: consultar README/LICENSE no repositório e continuar a configuração guiada da Hostinger.

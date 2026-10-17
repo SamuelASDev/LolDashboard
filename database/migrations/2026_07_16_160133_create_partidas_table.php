@@ -12,10 +12,10 @@ return new class extends Migration
             $table->id();
             // Vincula a partida à conta do invocador correspondente
             $table->foreignId('conta_id')->constrained('contas')->onDelete('cascade');
-            
+
             // ID único da partida para evitar duplicados
             $table->string('match_id')->unique();
-            
+
             // Dados de desempenho do jogador
             $table->string('champion_name');
             $table->boolean('win');

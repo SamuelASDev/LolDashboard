@@ -3,37 +3,48 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Conta extends Model
 {
-    protected $fillable = [
-        'user_id',
-        'nick',
-        'riot_id',
-        'email',
-        'regiao',
-        'elo',
-        'pdl',
-        'wins',
-        'losses',
-        'winrate',
-        'cutoff_lp',
-        'last_game_at' // ⬅️ Adicionado aqui
-    ];
+    protected $fillable = ['nick', 'riot_id', 'regiao'];
 
-    protected $casts = [
-    'last_game_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return ['last_game_at' => 'datetime', 'rank_synced_at' => 'datetime',
+            'history_synced_at' => 'datetime', 'pdl' => 'integer', 'wins' => 'integer',
+            'losses' => 'integer', 'winrate' => 'float'];
+    }
 
-    // 🔗 Uma conta pertence a um usuário
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    // Adiciona esta relação dentro da classe Conta
-    public function partidas()
+    public function partidas(): HasMany
     {
         return $this->hasMany(Partida::class);
+    }
+
+    public function syncRuns(): HasMany
+    {
+        return $this->hasMany(SyncRun::class);
+    }
+
+    public function latestSync(): HasOne
+    {
+        return $this->hasOne(SyncRun::class)->latestOfMany();
+    }
+
+    public static function identityKey(int $userId, string $region, string $riotId): string
+    {
+        return hash('sha256', $userId.'|'.$region.'|'.mb_strtolower(trim($riotId)));
+    }
+
+    public function rankSnapshots(): HasMany
+    {
+        return $this->hasMany(RankSnapshot::class);
     }
 }

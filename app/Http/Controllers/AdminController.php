@@ -2,48 +2,35 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Users\ManageUser;
+use App\Models\AuditEvent;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class AdminController extends Controller
 {
-    /**
-     * Lista todos os usuários do sistema (menos o admin logado)
-     */
-    public function index()
+    public function index(Request $request): View
     {
-        // Pega todos os usuários, trazendo junto a contagem de contas vinculadas de cada um
-        $usuarios = User::where('id', '!=', auth()->id())
-            ->withCount('contas')
-            ->orderBy('name', 'asc')
-            ->get();
-
-        return view('admin.index', compact('usuarios'));
-    }
-
-    /**
-     * Atualiza o cargo (role) do usuário (User ou Mod)
-     */
-    public function updateRole(Request $request, $id)
-    {
-        $request->validate([
-            'role' => 'required|in:user,mod'
+        return view('admin.index', [
+            'usuarios' => User::withCount('contas')->orderBy('name')->paginate(20),
+            'events' => $request->user()->role === 'admin' ? AuditEvent::latest('id')->limit(20)->get() : collect(),
         ]);
-
-        $usuario = User::findOrFail($id);
-        $usuario->update(['role' => $request->role]);
-
-        return back()->with('success', "Cargo de {$usuario->name} atualizado com sucesso!");
     }
 
-    /**
-     * Deleta o usuário e todas as suas contas vinculadas (Cascade automático)
-     */
-    public function destroy($id)
+    public function updateRole(Request $request, int $id, ManageUser $users): RedirectResponse
     {
-        $usuario = User::findOrFail($id);
-        $usuario->delete(); // O relacionamento configurado na migration vai apagar as contas dele também!
+        $data = $request->validate(['role' => ['required', 'in:user,mod']]);
+        $users->changeRole($request->user(), User::findOrFail($id), $data['role']);
 
-        return back()->with('success', "O usuário {$usuario->name} foi banido do sistema!");
+        return back()->with('success', 'Permissão atualizada e registrada.');
+    }
+
+    public function destroy(Request $request, int $id, ManageUser $users): RedirectResponse
+    {
+        $users->delete($request->user(), User::findOrFail($id));
+
+        return back()->with('success', 'Usuário e dados vinculados excluídos definitivamente.');
     }
 }

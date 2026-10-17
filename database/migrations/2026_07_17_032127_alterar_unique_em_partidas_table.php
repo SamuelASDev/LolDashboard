@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -27,6 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Abort before modifying indexes: shared matches are valid under the new schema.
+        if (DB::table('partidas')->select('match_id')->groupBy('match_id')->havingRaw('COUNT(*) > 1')->exists()) {
+            throw new RuntimeException('Rollback interrompido: existem partidas compartilhadas entre contas. Nenhum dado foi apagado.');
+        }
         Schema::table('partidas', function (Blueprint $table) {
             // Reverte a alteração caso precise dar um rollback
             $table->dropUnique(['match_id', 'conta_id']);

@@ -7,6 +7,7 @@ use App\Models\Season;
 use App\Models\User;
 use App\Queries\AccountRankHistory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\Concerns\BuildsAccounts;
@@ -26,6 +27,25 @@ class PersonalWorkspaceTest extends TestCase
         app(ImportMatch::class)->execute($account, 'BR1_NOTE', $payload);
 
         return [$account, $account->partidas()->first()];
+    }
+
+    public function test_scoreboard_does_not_emit_blade_directives_or_duplicate_player_names(): void
+    {
+        [, $match] = $this->encounter();
+        $match->game->participants()->where('puuid', 'owner')->update(['riot_id' => 'DonoUnico#BR1']);
+        $match->game->participants()->where('puuid', 'fixture-3')->update(['puuid' => null, 'riot_id' => 'SemIdentidade#BR1']);
+        $match->load('game.participants');
+        foreach ([null, collect(), collect(['fixture-2' => 'Minha nota'])] as $notes) {
+            $html = Blade::render('<x-match-card :match="$match" :player-notes="$notes" />', compact('match', 'notes'));
+            $this->assertStringNotContainsString('@else', $html);
+            $this->assertStringNotContainsString('@endif', $html);
+            preg_match_all('/<tbody>(.*?)<\/tbody>/s', $html, $tables);
+            $scoreboard = implode('', $tables[1]);
+            $this->assertSame(1, substr_count($scoreboard, 'Aliado#'));
+            $this->assertSame(1, substr_count($scoreboard, 'DonoUnico#BR1'));
+            $this->assertSame(1, substr_count($scoreboard, 'SemIdentidade#BR1'));
+            $this->assertStringContainsString(route('players.show', 'fixture-2'), $html);
+        }
     }
 
     public function test_search_shows_encounters_and_private_note_and_matches(): void

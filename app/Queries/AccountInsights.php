@@ -5,10 +5,11 @@ namespace App\Queries;
 use App\Models\Partida;
 use App\Support\GameLabels;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class AccountInsights
 {
-    public function build(Builder $base): array
+    public function build(Builder $base, bool $includeOpponents = false, bool $scan = true, bool $includeTeammates = true): array
     {
         $groups = ['side' => [], 'role' => [], 'duration' => [], 'day' => [], 'hour' => [], 'after' => [], 'opponent' => [], 'surrender' => []];
         $records = [];
@@ -17,7 +18,7 @@ class AccountInsights
         $previous = null;
         $streak = $bestWins = $bestLosses = $total = $enriched = 0;
         $sums = $counts = [];
-        foreach ((clone $base)->select('partidas.*')->orderBy('played_at')->orderBy('partidas.id')->cursor() as $match) {
+        foreach (($scan ? (clone $base)->select('partidas.*')->orderBy('played_at')->orderBy('partidas.id')->cursor() : []) as $match) {
             $total++;
             $enriched += $match->details_synced_at !== null ? 1 : 0;
             $date = $match->played_at->timezone('America/Sao_Paulo');
@@ -73,11 +74,15 @@ class AccountInsights
                 array_shift($recent);
             }
         }
+        if (! $scan) {
+            $total = (clone $base)->count();
+            $enriched = (clone $base)->whereNotNull('details_synced_at')->count();
+        }
         $averages = [];
         foreach ($sums as $key => $sum) {
             $averages[$key] = ['value' => round($sum / $counts[$key], 1), 'sample' => $counts[$key]];
         }
-        $teammates = Partida::query()
+        $teammates = $includeTeammates ? Partida::query()
             ->whereIn('partidas.id', (clone $base)->select('partidas.id'))
             ->join('match_participants as teammates', function ($join) {
                 $join->on('teammates.riot_match_id', '=', 'partidas.riot_match_id')
@@ -85,8 +90,42 @@ class AccountInsights
                     ->whereColumn('teammates.puuid', '!=', 'partidas.identity_puuid');
             })
             ->select('teammates.puuid')->selectRaw('MAX(teammates.riot_id) AS riot_id, COUNT(*) AS games, SUM(CASE WHEN partidas.win = 1 THEN 1 ELSE 0 END) AS wins')
-            ->groupBy('teammates.puuid')->orderByDesc('games')->orderBy('teammates.puuid')->limit(10)->get();
+            ->groupBy('teammates.puuid')->orderByDesc('games')->orderBy('teammates.puuid')->limit(10)->get() : collect();
 
-        return compact('teammates', 'groups', 'records', 'recent', 'days', 'total', 'enriched', 'averages', 'bestWins', 'bestLosses', 'streak', 'previous');
+        $laneOpponents = $includeOpponents ? $this->recurringOpponents($base, true) : collect();
+        $allOpponents = $includeOpponents ? $this->recurringOpponents($base, false) : collect();
+
+        return compact('sums', 'teammates', 'laneOpponents', 'allOpponents', 'groups', 'records', 'recent', 'days', 'total', 'enriched', 'averages', 'bestWins', 'bestLosses', 'streak', 'previous');
+    }
+
+    private function recurringOpponents(Builder $base, bool $samePosition): Collection
+    {
+        $query = Partida::query()->whereIn('partidas.id', (clone $base)->select('partidas.id'))
+            ->join('match_participants as rivals', function ($join) {
+                $join->on('rivals.riot_match_id', '=', 'partidas.riot_match_id')
+                    ->whereColumn('rivals.team_id', '!=', 'partidas.team_id');
+            })
+            ->whereIn('partidas.team_id', [100, 200])->whereIn('rivals.team_id', [100, 200])
+            ->whereNotNull('rivals.puuid')->where('rivals.puuid', '!=', '')
+            ->whereColumn('rivals.puuid', '!=', 'partidas.identity_puuid');
+
+        if ($samePosition) {
+            $query->whereIn('partidas.lane', ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'])
+                ->whereColumn('rivals.position', 'partidas.lane')
+                // Posições duplicadas ou sem o próprio jogador identificado não definem confronto direto.
+                ->whereRaw('(SELECT COUNT(*) FROM match_participants AS lane_rivals WHERE lane_rivals.riot_match_id = partidas.riot_match_id AND lane_rivals.team_id = rivals.team_id AND lane_rivals.position = partidas.lane) = 1')
+                ->whereRaw('(SELECT COUNT(*) FROM match_participants AS lane_allies WHERE lane_allies.riot_match_id = partidas.riot_match_id AND lane_allies.team_id = partidas.team_id AND lane_allies.position = partidas.lane) = 1')
+                ->whereExists(function ($owner) {
+                    $owner->selectRaw('1')->from('match_participants as lane_owner')
+                        ->whereColumn('lane_owner.riot_match_id', 'partidas.riot_match_id')
+                        ->whereColumn('lane_owner.team_id', 'partidas.team_id')
+                        ->whereColumn('lane_owner.position', 'partidas.lane')
+                        ->whereColumn('lane_owner.puuid', 'partidas.identity_puuid');
+                });
+        }
+
+        return $query->select('rivals.puuid')
+            ->selectRaw('MAX(rivals.riot_id) AS riot_id, COUNT(DISTINCT partidas.id) AS games, COUNT(DISTINCT CASE WHEN partidas.win = 1 THEN partidas.id END) AS wins')
+            ->groupBy('rivals.puuid')->orderByDesc('games')->orderBy('rivals.puuid')->limit(10)->get();
     }
 }

@@ -36,6 +36,11 @@ class SyncAccount implements ShouldQueue
             if (! $run || ! $run->isActive() || $run->version !== $this->version) {
                 return;
             }
+            if ($run->queue_id !== 420) {
+                $run->finish('cancelled', 'Esta fila foi desativada. Historico preservado.');
+
+                return;
+            }
             if ($run->created_at->addHours(config('riot.run_hours'))->isPast()) {
                 $run->finish('failed', 'Tempo máximo atingido. Inicie uma nova sincronização.');
 

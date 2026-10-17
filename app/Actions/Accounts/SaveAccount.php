@@ -16,6 +16,9 @@ class SaveAccount
             return DB::transaction(function () use ($user, $data, $conta) {
                 // Serialize identity checks per owner, including simultaneous registrations.
                 User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+                if (! $conta && $user->contas()->count() >= config('workspace.max_accounts')) {
+                    throw ValidationException::withMessages(['riot_id' => 'Limite de contas atingido.']);
+                }
                 if ($conta) {
                     $conta = $user->contas()->whereKey($conta->id)->lockForUpdate()->firstOrFail();
                     if ($conta->syncRuns()->whereNotNull('active_conta_id')->exists()) {

@@ -4,15 +4,24 @@
 <header class="profile-hero mb-7">
     <div class="hero-shade"></div>
     <div class="flex flex-wrap items-end justify-between gap-6">
-        <div><p class="eyebrow text-violet-300">Seu acompanhamento · Temporada {{ $season->name }}</p><h1 class="hero-title mt-3">Visão geral</h1><p class="mt-3 text-sm text-slate-400">Suas contas, seu repertório e o caminho para o próximo elo.</p></div>
+        <div><p class="eyebrow text-violet-300">Seu acompanhamento · Temporada {{ $season->name }}</p><h1 class="hero-title mt-3">Visão geral</h1><p class="mt-3 text-sm text-slate-400">Estatísticas, padrões e histórico de todas as suas contas em um só lugar.</p></div>
         <div class="flex flex-wrap gap-2">
             @if($contas->isNotEmpty())<form method="POST" action="{{ route('contas.syncAll') }}">@csrf<input type="hidden" name="season" value="{{ $season->id }}"><button class="btn-secondary" type="submit">Sincronizar todas</button></form>@endif
             <a class="btn-primary" href="{{ route('contas.create') }}">+ Adicionar conta</a>
         </div>
     </div>
 </header>
-<div class="mb-5"><x-period-filter :days="$days" :season="$season" :seasons="$seasons" /></div>
+@php($queueLabel = 'Solo/Duo')
+@include('contas.partials.tabs')
+@include('contas.partials.filters')
 <x-stats-summary :summary="$summary" />
+<p class="mb-5 mt-3 text-xs leading-relaxed text-slate-500">Todas as suas contas · {{ $queueLabel }} · {{ $insight['enriched'] }} de {{ $insight['total'] }} participações com detalhes · Uma participação por conta em cada partida · Remakes curtos excluídos. Sequências seguem a ordem cronológica das participações.</p>
+<div class="mb-5 grid grid-cols-3 gap-3" aria-label="Totais de combate de todas as contas">
+    @foreach(['kills'=>'Abates totais', 'deaths'=>'Mortes totais', 'assists'=>'Assistências totais'] as $key=>$label)
+    <div class="panel p-4"><p class="text-xs text-slate-500">{{ $label }}</p><p class="mt-2 text-xl font-semibold text-amber-200">{{ number_format($summary[$key], 0, ',', '.') }}</p></div>
+    @endforeach
+</div>
+@include('contas.partials.analytics')
 <section class="mt-10" aria-labelledby="accounts-title">
     <div class="mb-4 flex items-center justify-between"><h2 id="accounts-title" class="text-lg font-semibold">Suas contas</h2><span class="text-xs text-slate-500">{{ $contas->count() }} cadastradas</span></div>
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -28,6 +37,7 @@
                     <p class="mt-1 text-sm text-slate-400">{{ $conta->pdl ?? 0 }} LP <span class="px-2 text-slate-700">/</span> {{ $conta->wins ?? 0 }}V · {{ $conta->losses ?? 0 }}D <span class="text-xs text-slate-500">(ranking atual)</span></p>
                     <p class="mt-3 text-xs text-slate-500">Ranking consultado: {{ $conta->rank_synced_at?->timezone('America/Sao_Paulo')->format('d/m H:i') ?? 'ainda não consultado' }}</p>
                     <x-rank-progress :progress="$rankProgress->get($conta->id)" />
+                    <x-decay-status :decay="$accountDecay->get($conta->id)" :account="$conta" compact />
                     @if($conta->latestSync)<p class="mt-3 text-xs {{ $conta->latestSync->status === 'failed' ? 'text-rose-300' : 'text-slate-400' }}">{{ $conta->latestSync->message }}</p>@endif
                     <div class="mt-5 border-t border-violet-400/15 pt-4">
                         <p class="eyebrow">Mais jogados no período</p>
@@ -48,8 +58,10 @@
         @endforelse
     </div>
 </section>
+@if($tab === 'overview')
 <section class="panel mt-10 overflow-hidden" aria-labelledby="champions-title">
     <div class="border-b border-violet-400/15 p-5"><h2 id="champions-title" class="text-lg font-semibold">Desempenho por campeão</h2><p class="mt-1 text-xs text-slate-500">Todas as suas contas · Uma participação por conta em cada partida · Remakes curtos excluídos</p></div>
     <x-champion-table :champions="$champions" />
 </section>
+@endif
 @endsection

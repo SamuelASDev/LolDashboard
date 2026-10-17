@@ -18,7 +18,7 @@ class MigrationSafetyTest extends TestCase
     {
         // RefreshDatabase guarantees this connection is the isolated SQLite test database.
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
-        Artisan::call('migrate:rollback', ['--step' => 4, '--force' => true]);
+        Artisan::call('migrate:rollback', ['--step' => 6, '--force' => true]);
         $user = User::factory()->create();
         $id = DB::table('contas')->insertGetId(['user_id' => $user->id, 'nick' => 'Legado',
             'riot_id' => 'Antigo#BR1', 'regiao' => 'br1', 'created_at' => now(), 'updated_at' => now()]);
@@ -30,6 +30,7 @@ class MigrationSafetyTest extends TestCase
         $this->assertTrue(Schema::hasTable('riot_matches'));
         $this->assertTrue(Schema::hasTable('rank_cutoffs'));
         $this->assertTrue(Schema::hasColumn('partidas', 'details_synced_at'));
+        $this->assertTrue(Schema::hasColumn('contas', 'decay_reference'));
         $this->assertDatabaseHas('contas', ['id' => $id, 'riot_id' => 'Antigo#BR1', 'puuid' => null]);
         $this->assertDatabaseHas('partidas', ['match_id' => 'BR1_LEGACY', 'identity_puuid' => null]);
     }

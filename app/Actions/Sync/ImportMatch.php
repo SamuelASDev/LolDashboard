@@ -23,7 +23,7 @@ class ImportMatch
         if (isset($data['metadata']['matchId']) && $data['metadata']['matchId'] !== $matchId) {
             throw new RiotException('A Riot retornou uma partida diferente da solicitada.');
         }
-        if (! in_array($info['queueId'], [420, 440], true)) {
+        if (! in_array($info['queueId'], [420], true)) {
             return false;
         }
         $player = collect($info['participants'] ?? [])->firstWhere('puuid', $conta->puuid);
@@ -44,7 +44,7 @@ class ImportMatch
                 throw new RiotException('A Riot retornou estatísticas inválidas.');
             }
         }
-        if (! is_array($info['participants'] ?? null) || count($info['participants']) > 10
+        if (! is_array($info['participants'] ?? null) || count($info['participants']) !== 10
             || (isset($info['gameDuration']) && (! is_int($info['gameDuration']) || $info['gameDuration'] < 0))) {
             throw new RiotException('A Riot retornou uma estrutura de partida inválida.');
         }
@@ -52,6 +52,8 @@ class ImportMatch
             throw new RiotException('A Riot retornou times inválidos.');
         }
         $slots = [];
+        $identities = [];
+        $teamCounts = [100 => 0, 200 => 0];
         foreach ($info['participants'] as $index => $participant) {
             if (! is_array($participant) || ! is_string($participant['championName'] ?? null)
                 || ! is_bool($participant['win'] ?? null)) {
@@ -64,6 +66,13 @@ class ImportMatch
             if (! is_int($slot) || $slot < 1 || $slot > 10 || isset($slots[$slot])) {
                 throw new RiotException('A Riot retornou participantes duplicados ou inválidos.');
             }
+            $identity = $participant['puuid'] ?? null;
+            $team = $participant['teamId'] ?? null;
+            if (! is_string($identity) || $identity === '' || strlen($identity) > 128 || isset($identities[$identity]) || ! in_array($team, [100, 200], true)) {
+                throw new RiotException('A Riot retornou identidades ou times invalidos. Historico preservado.');
+            }
+            $identities[$identity] = true;
+            $teamCounts[$team]++;
             $slots[$slot] = true;
             foreach (['kills', 'deaths', 'assists', 'goldEarned', 'totalDamageDealtToChampions', 'totalDamageTaken',
                 'visionScore', 'totalMinionsKilled', 'neutralMinionsKilled', 'wardsPlaced', 'wardsKilled',
@@ -73,6 +82,9 @@ class ImportMatch
                     throw new RiotException('A Riot retornou estatísticas inválidas de participante.');
                 }
             }
+        }
+        if ($teamCounts !== [100 => 5, 200 => 5]) {
+            throw new RiotException('A Riot retornou times incompletos. Historico preservado.');
         }
         $window ??= HistoryWindow::forRegion(RiotRegion::from($conta->regiao));
         if (HistoryWindow::matchStartedAtMs($info) === null) {
@@ -87,6 +99,7 @@ class ImportMatch
         $remake = ($player['gameEndedInEarlySurrender'] ?? false) && ($info['gameDuration'] ?? 9999) < 300;
 
         return DB::transaction(function () use ($conta, $matchId, $data, $info, $player, $playedAt, $remake, $slots, $window) {
+            $conta = Conta::whereKey($conta->id)->lockForUpdate()->firstOrFail();
             $season = isset($window['season_id'])
                 ? Season::whereKey($window['season_id'])->lockForUpdate()->firstOrFail()
                 : Season::where('name', (string) $window['season'])->lockForUpdate()->first();

@@ -22,7 +22,9 @@
             LoL Dashboard
         </a>
         <p class="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-violet-300/60">Central do invocador</p>
-        <nav aria-label="Navegação principal" class="space-y-1">
+        <a class="nav-item" href="{{ route('players.index') }}">Jogadores</a>
+            <a class="nav-item" href="{{ route('workspace.index') }}">Meu caderno</a>
+            <nav aria-label="Navegação principal" class="space-y-1">
             <a class="nav-item {{ request()->routeIs('dashboard') ? 'nav-active' : '' }}" href="{{ route('dashboard') }}" @if(request()->routeIs('dashboard')) aria-current="page" @endif>Visão geral</a>
             <a class="nav-item {{ request()->routeIs('contas.create') ? 'nav-active' : '' }}" href="{{ route('contas.create') }}">Adicionar conta</a>
             <a class="nav-item {{ request()->routeIs('profile.*') ? 'nav-active' : '' }}" href="{{ route('profile.edit') }}">Meu perfil</a>
@@ -41,6 +43,11 @@
     </aside>
     <main :inert="menuOpen && !desktop" id="content" class="min-w-0 px-5 py-8 sm:px-8 lg:ml-64 lg:px-10 lg:py-10">
         <div class="mx-auto max-w-[1440px]">
+            <form method="GET" action="{{ route('players.index') }}" class="mb-6 flex gap-2" role="search">
+                <label class="sr-only" for="global-player-search">Pesquisar jogadores do meu historico</label>
+                <input id="global-player-search" name="q" class="field min-w-0" maxlength="100" placeholder="Buscar jogador com quem ou contra quem joguei" value="{{ request()->routeIs('players.*') ? request('q') : '' }}">
+                <button class="btn-secondary shrink-0">Buscar jogador</button>
+            </form>
             @foreach(['success', 'error', 'status'] as $flash)
                 @if(session($flash))
                     <div role="status" class="notice mb-6">{{ session($flash) }}</div>

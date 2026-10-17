@@ -75,6 +75,6 @@ foreach (['GRANDMASTER' => 1400, 'CHALLENGER' => 2000] as $tier => $lp) {
 }
 $apex = User::factory()->create(['name' => 'Jogador Mestre', 'email' => 'apex@example.test']);
 $apexAccount = $apex->contas()->make(['nick' => 'Mestre', 'riot_id' => 'Mestre#BR1', 'regiao' => 'br1']);
-$apexAccount->forceFill(['elo' => 'MASTER I', 'pdl' => 1500, 'rank_synced_at' => now()])->save();
+$apexAccount->forceFill(['puuid' => 'apex-puuid', 'elo' => 'MASTER I', 'pdl' => 1500, 'rank_synced_at' => now()])->save();
 
 echo "Isolated browser fixture ready.\n";

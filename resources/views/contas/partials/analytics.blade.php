@@ -1,4 +1,5 @@
 @php($metricLabels = ['cs'=>'Farm','gold'=>'Ouro','damage'=>'Dano a campeões','damage_taken'=>'Dano recebido','vision_score'=>'Pontuação de visão','wards_placed'=>'Sentinelas colocadas','wards_killed'=>'Sentinelas destruídas','control_wards'=>'Controles comprados','kill_participation'=>'Participação nos abates (%)','healing'=>'Cura','kills'=>'Abates','assists'=>'Assistências','penta_kills'=>'Pentakills','cs_per_minute'=>'CS / min','gold_per_minute'=>'Ouro / min','damage_per_minute'=>'Dano / min'])
+@php($analyticsUrl = fn (array $parameters = []) => route($analyticsRoute, array_merge(request()->except('page'), $analyticsParams, $parameters)))
 @if($tab === 'overview')
     @include('contas.partials.overview')
 @elseif($tab === 'history')
@@ -12,7 +13,9 @@
             @php($dateLabel = $partida->played_at->timezone('America/Sao_Paulo')->format('d/m/Y'))
             @if($loop->first || $previousMatchDate !== $dateLabel)<h2 class="match-day">{{ $dateLabel }}</h2>@endif
             @php($previousMatchDate = $dateLabel)
-            <x-match-card :match="$partida" />
+            @if($aggregate)<p class="mt-4 text-xs text-violet-300"><a class="underline" href="{{ route('contas.show', $partida->conta_id) }}">{{ $partida->conta->riot_id }}</a> · Participação desta conta</p>@endif
+            <x-match-card :match="$partida" :player-notes="$playerNotes" />
+            @include('workspace.match-note')
         @empty
             <div class="panel p-10 text-center"><p class="text-sm text-slate-400">Nenhuma partida neste recorte.</p><p class="mt-2 text-xs text-slate-500">Amplie o período ou sincronize sua conta.</p></div>
         @endforelse
@@ -29,6 +32,7 @@
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         @forelse($insight['records'] as $metric=>$record)
         <section class="panel relative overflow-hidden p-5">
+            @if($aggregate)<p class="mb-3 text-xs text-violet-300">{{ $accountNames->get($record['match']->conta_id) }}</p>@endif
             <div class="absolute right-4 top-4 text-3xl text-violet-300/15" aria-hidden="true">✧</div>
             <p class="eyebrow">{{ $metricLabels[$metric] ?? $metric }}</p>
             <p class="mt-4 font-display text-4xl font-bold text-amber-200">{{ \App\Support\GameLabels::number($record['value'], $metric === 'kill_participation' ? 1 : 0) }}</p>
@@ -39,5 +43,9 @@
         @endforelse
     </div>
 @elseif($tab === 'progress')
-    @include('contas.partials.progress')
+    @if($aggregate)
+        @include('dashboard.progress')
+    @else
+        @include('contas.partials.progress')
+    @endif
 @endif

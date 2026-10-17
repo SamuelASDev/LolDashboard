@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ContaController;
+use App\Http\Controllers\DecayController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SeasonController;
 use App\Http\Controllers\SyncController;
+use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome_custom')->name('home');
@@ -16,10 +18,22 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::controller(WorkspaceController::class)->group(function () {
+        Route::get('/jogadores', 'players')->name('players.index');
+        Route::get('/jogadores/{puuid}', 'player')->name('players.show');
+        Route::put('/jogadores/{puuid}/anotacao', 'playerNote')->middleware('throttle:60,1')->name('players.note');
+        Route::put('/partidas/{partida}/anotacao', 'matchNote')->whereNumber('partida')->middleware('throttle:60,1')->name('matches.note');
+        Route::get('/caderno', 'index')->name('workspace.index');
+        Route::post('/caderno/favoritos', 'favorite')->middleware('throttle:30,1')->name('workspace.favorites');
+        Route::post('/caderno/metas', 'goal')->middleware('throttle:30,1')->name('workspace.goals');
+        Route::delete('/caderno/{type}/{id}', 'destroy')->whereNumber('id')->name('workspace.destroy');
+    });
     Route::get('/dashboard', [ContaController::class, 'index'])->name('dashboard');
     Route::get('/contas', fn () => to_route('dashboard', request()->only('days', 'season')))->name('contas.index');
     Route::post('/contas/sync-all', [SyncController::class, 'storeAll'])->middleware('throttle:sync')->name('contas.syncAll');
     Route::resource('contas', ContaController::class)->except('index')->where(['conta' => '[0-9]+']);
+    Route::put('/contas/{conta}/decay', [DecayController::class, 'update'])->whereNumber('conta')->name('contas.decay.update');
+    Route::delete('/contas/{conta}/decay', [DecayController::class, 'destroy'])->whereNumber('conta')->name('contas.decay.destroy');
     Route::post('/contas/{conta}/sync', [SyncController::class, 'store'])->whereNumber('conta')->middleware('throttle:sync')->name('contas.sync');
     Route::get('/contas/{conta}/sync', [SyncController::class, 'status'])->whereNumber('conta')->name('contas.syncStatus');
     Route::delete('/contas/{conta}/sync', [SyncController::class, 'destroy'])->whereNumber('conta')->name('contas.cancelSync');

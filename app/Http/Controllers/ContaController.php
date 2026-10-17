@@ -8,10 +8,10 @@ use App\Http\Requests\ContaRequest;
 use App\Models\Conta;
 use App\Models\Season;
 use App\Models\User;
-use App\Queries\AccountInsights;
-use App\Queries\AccountMatchups;
+use App\Queries\AccountAnalytics;
+use App\Queries\AccountDecay;
+use App\Queries\AccountRankHistory;
 use App\Queries\AccountRanking;
-use App\Queries\AccountStatistics;
 use App\Queries\RankProgress;
 use App\Queries\SelectedSeason;
 use App\Support\PersonalCharts;
@@ -23,64 +23,46 @@ use Illuminate\View\View;
 
 class ContaController extends Controller
 {
-    public function index(Request $request, AccountStatistics $stats, AccountRanking $ranking, RankProgress $progress): View
+    public function index(Request $request, AccountRanking $ranking, RankProgress $progress, AccountAnalytics $analytics): View
     {
         $days = $this->days($request);
         $season = app(SelectedSeason::class)->execute($request);
+        $filters = $analytics->filters($request);
         $contas = $ranking->ordered($request->user()->contas())->with('latestSync')->get();
-        $base = $stats->base($request->user(), $days, null, 420, $season);
 
         return view('dashboard', [
+            ...$analytics->build($request->user(), $season, $days, $filters),
             'season' => $season, 'seasons' => Season::where('status', '!=', 'draft')->orderByDesc('id')->get(),
             'rankProgress' => $progress->accounts($contas),
-            'contas' => $contas, 'days' => $days, 'summary' => $stats->summary($base),
-            'champions' => $stats->champions($base),
-            'topByAccount' => $stats->champions($base, true)->groupBy('conta_id'),
+            'accountDecay' => app(AccountDecay::class)->accounts($contas),
+            'rankHistories' => ($filters['tab'] ?? '') === 'progress' ? app(AccountRankHistory::class)->accounts($contas, $season, $days) : collect(),
+            'accountNames' => $contas->pluck('riot_id', 'id'),
+            'aggregate' => true, 'analyticsRoute' => 'dashboard', 'analyticsParams' => [],
+            'contas' => $contas, 'days' => $days,
         ]);
     }
 
-    public function show(Request $request, int $conta, AccountStatistics $stats, AccountInsights $insights, RankProgress $progress, AccountMatchups $matchups): View
+    public function show(Request $request, int $conta, RankProgress $progress, AccountAnalytics $analytics): View
     {
         $conta = $this->owned($request, $conta);
         $days = $this->days($request);
         $season = app(SelectedSeason::class)->execute($request);
-        $base = $stats->base($request->user(), $days, $conta, 420, $season);
-
-        $filters = $request->validate([
-            'queue' => ['sometimes', 'integer', 'in:420,440'],
-            'opponent' => ['nullable', 'string', 'max:64'],
-            'champion' => ['nullable', 'string', 'max:64'], 'role' => ['nullable', 'in:TOP,JUNGLE,MIDDLE,BOTTOM,UTILITY,UNKNOWN'],
-            'result' => ['nullable', 'in:win,loss'], 'tab' => ['nullable', 'in:overview,history,champions,matchups,patterns,records,progress'],
-        ]);
-        if ((int) ($filters['queue'] ?? 420) === 440) {
-            $base = $stats->base($request->user(), $days, $conta, 440, $season);
-        }
-        $optionBase = clone $base;
-        $base->when($filters['champion'] ?? null, fn ($q, $value) => $q->where('champion_name', $value))
-            ->when($filters['opponent'] ?? null, fn ($q, $value) => $q->where('opponent_champion_name', $value))
-            ->when($filters['role'] ?? null, fn ($q, $value) => $q->where('lane', $value))
-            ->when($filters['result'] ?? null, fn ($q, $value) => $q->where('win', $value === 'win'));
-        $insight = $insights->build($base);
-
+        $filters = $analytics->filters($request);
         $region = RiotRegion::tryFrom($conta->regiao);
-        $snapshots = $conta->rankSnapshots()->where('observed_at', '>=', $region ? $season->startFor($region) : $season->starts_at)
+        $snapshots = ($filters['tab'] ?? '') === 'progress' ? $conta->rankSnapshots()->where('observed_at', '>=', $region ? $season->startFor($region) : $season->starts_at)
             ->when($season->ends_at, fn ($q) => $q->where('observed_at', '<', $season->ends_at))
             ->when($days > 0, fn ($q) => $q->where('observed_at', '>=', now()->subDays($days)))
-            ->latest('observed_at')->limit(60)->get()->reverse();
+            ->latest('observed_at')->limit(60)->get()->reverse() : collect();
 
         return view('contas.show', [
+            ...$analytics->build($request->user(), $season, $days, $filters, $conta),
             'season' => $season, 'seasons' => Season::where('status', '!=', 'draft')->orderByDesc('id')->get(),
-            'matchups' => ($filters['tab'] ?? 'overview') === 'matchups' ? $matchups->grouped($base) : collect(),
-            'dailyChart' => PersonalCharts::daily($insight['days']),
             'rankChart' => PersonalCharts::ranking($snapshots),
             'progress' => $progress->accounts(collect([$conta]))->get($conta->id),
-            'insight' => $insight, 'tab' => $filters['tab'] ?? 'overview',
-            'championOptions' => (clone $optionBase)->distinct()->orderBy('champion_name')->pluck('champion_name'),
-            'opponentOptions' => (clone $optionBase)->whereNotNull('opponent_champion_name')->distinct()->orderBy('opponent_champion_name')->pluck('opponent_champion_name'),
+            'decay' => app(AccountDecay::class)->accounts(collect([$conta]))->get($conta->id),
+            'aggregate' => false, 'analyticsRoute' => 'contas.show', 'analyticsParams' => ['conta' => $conta],
             'snapshots' => $snapshots,
             'conta' => $conta->load('latestSync'), 'days' => $days,
-            'summary' => $stats->summary($base), 'champions' => $stats->champions($base),
-            'partidas' => (clone $base)->select('partidas.*')->with(['game' => fn ($q) => $q->forDisplay(), 'game.participants'])->orderByDesc('played_at')->orderByDesc('partidas.id')->paginate(20)->withQueryString(),
             'legacyCount' => $conta->partidas()->whereNull('identity_puuid')->count(),
         ]);
     }

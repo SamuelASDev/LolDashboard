@@ -52,7 +52,7 @@ class RedirectAfterAuthentication
         }
 
         return match ($route->getName()) {
-            'dashboard', 'profile.edit', 'contas.create', 'contas.index' => true,
+            'dashboard', 'profile.edit', 'contas.create', 'contas.index', 'workspace.index', 'players.index' => true,
             'contas.show', 'contas.edit', 'contas.legacyShow' => $request->user()->contas()->whereKey($route->parameter('conta'))->exists(),
             'admin.seasons.index' => $request->user()->role === 'admin',
             'admin.index' => in_array($request->user()->role, ['admin', 'mod'], true),

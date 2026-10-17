@@ -10,6 +10,7 @@ use App\Models\RankSnapshot;
 use App\Models\RiotMatch;
 use App\Models\Season;
 use App\Models\SyncRun;
+use App\Queries\AccountDecay;
 use App\Services\RiotService;
 use App\Support\HistoryWindow;
 use Carbon\CarbonImmutable;
@@ -24,6 +25,11 @@ class AdvanceSync
     /** One bounded unit per job. No network is performed inside a database transaction. */
     public function execute(SyncRun $run): void
     {
+        if ($run->queue_id !== 420) {
+            $run->finish('cancelled', 'Fila desativada. Historico preservado.');
+
+            return;
+        }
         $conta = $run->conta;
         $region = RiotRegion::tryFrom($conta->regiao);
         if (! $region) {
@@ -69,6 +75,7 @@ class AdvanceSync
                 ? $account['gameName'].'#'.$account['tagLine'] : $conta->riot_id;
             try {
                 DB::transaction(function () use ($conta, $account, $rank, $total, $canonical, $run) {
+                    $conta = Conta::whereKey($conta->id)->lockForUpdate()->firstOrFail();
                     $conta->forceFill([
                         'puuid' => $account['puuid'], 'riot_id' => $canonical,
                         'identity_key' => Conta::identityKey($conta->user_id, $conta->regiao, $canonical),
@@ -77,6 +84,7 @@ class AdvanceSync
                         'losses' => $rank['losses'] ?? 0,
                         'winrate' => $total ? round($rank['wins'] / $total * 100, 1) : 0,
                         'cutoff_lp' => null, 'rank_synced_at' => now(),
+                        'decay_reference' => in_array($rank['tier'] ?? '', AccountDecay::TIERS, true) ? $conta->decay_reference : null,
                         'last_game_at' => $conta->puuid ? $conta->last_game_at : null,
                     ])->save();
                     RankSnapshot::create(['conta_id' => $conta->id, 'queue_id' => 420,
@@ -99,7 +107,14 @@ class AdvanceSync
         $pending = $run->pending_ids ?? [];
         if ($pending === []) {
             if ($run->stop_after_page || ($run->mode === 'recent' && $run->cursor >= 60)) {
-                $conta->forceFill(['history_synced_at' => now()])->save();
+                $coverage = ['history_synced_at' => now()];
+                if ($run->queue_id === 420 && $season?->id === Season::current()->id && $window['end'] >= now()->subDay()->getTimestamp()) {
+                    $bounded = $window;
+                    // Only dates actually traversed by this run attest recent coverage.
+                    $bounded['start'] = max($window['start'], $run->context['coverage_start'] ?? now()->getTimestamp());
+                    $coverage += ['solo_history_synced_at' => now(), 'solo_history_window' => $bounded];
+                }
+                $conta->forceFill($coverage)->save();
                 $run->finish('completed', 'Histórico recente da temporada selecionada atualizado. Use a importação da temporada para ampliar a busca.');
 
                 return;
@@ -111,13 +126,26 @@ class AdvanceSync
             }
             $ids = $this->riot->matchIds($conta->puuid, $region, $run->cursor, $run->queue_id, $window);
             if ($ids === []) {
-                $conta->forceFill(['history_synced_at' => now()])->save();
+                $coverage = ['history_synced_at' => now()];
+                if ($run->queue_id === 420 && $season?->id === Season::current()->id && $window['end'] >= now()->subDay()->getTimestamp()) {
+                    $coverage += ['solo_history_synced_at' => now(), 'solo_history_window' => $window];
+                }
+                $conta->forceFill($coverage)->save();
                 $run->finish('completed', 'Busca da temporada selecionada concluída. Não há mais partidas disponíveis neste período.');
 
                 return;
             }
             $known = Partida::where('conta_id', $conta->id)->where('identity_puuid', $conta->puuid)
                 ->whereNotNull('details_synced_at')->where('played_at', '>=', CarbonImmutable::createFromTimestamp($window['start'], 'UTC'))->whereIn('match_id', $ids)->pluck('match_id')->all();
+            if ($known !== []) {
+                $oldest = Partida::where('conta_id', $conta->id)->whereIn('match_id', $known)
+                    ->selectRaw('MIN(COALESCE(started_at, played_at)) as oldest')->value('oldest');
+                if ($oldest) {
+                    $context = $run->context;
+                    $context['coverage_start'] = min($context['coverage_start'] ?? PHP_INT_MAX, CarbonImmutable::parse($oldest)->getTimestamp());
+                    $run->context = $context;
+                }
+            }
             $pageIds = $ids;
             sort($pageIds);
             $hash = hash('sha256', implode('|', $pageIds));
@@ -160,6 +188,11 @@ class AdvanceSync
             DB::transaction(function () use ($conta, $id, $data, $run, $pending, $window) {
                 if ($data !== null && $this->importer->execute($conta, $id, $data, $window)) {
                     $run->imported++;
+                }
+                if ($data !== null) {
+                    $context = $run->context;
+                    $context['coverage_start'] = min($context['coverage_start'] ?? PHP_INT_MAX, (int) floor(HistoryWindow::matchStartedAtMs($data['info']) / 1000));
+                    $run->context = $context;
                 }
                 array_shift($pending);
                 $run->pending_ids = $pending;

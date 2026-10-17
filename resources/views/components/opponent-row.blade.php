@@ -1,5 +1,5 @@
-@props(['opponent', 'role', 'account'])
-<a class="matchup-row" href="{{ route('contas.show', array_merge(request()->except('page'), ['conta'=>$account,'tab'=>'history','role'=>$role,'opponent'=>$opponent['champion_name']])) }}">
+@props(['opponent', 'role', 'account' => null, 'href' => null])
+<a class="matchup-row" href="{{ $href ?? route('contas.show', array_merge(request()->except('page'), ['conta'=>$account,'tab'=>'history','role'=>$role,'opponent'=>$opponent['champion_name']])) }}">
                 <span class="flex min-w-0 items-center gap-3"><x-game-icon :id="$opponent['champion_id']" :name="$opponent['champion_name']" size="h-11 w-11" /><span><strong class="block text-sm">{{ $opponent['champion_name'] }}</strong><span class="mt-1 block text-[10px] text-slate-500">{{ $opponent['games'] }} {{ $opponent['games'] === 1 ? 'partida' : 'partidas' }} · {{ $opponent['wins'] }}V / {{ $opponent['losses'] }}D</span></span></span>
                 <span class="ml-auto flex items-center gap-5 text-right"><span class="hidden text-xs text-slate-400 sm:block">{{ $opponent['kda'] }}<small class="mt-1 block text-[9px] text-slate-600">KDA</small></span><span class="w-16"><strong class="text-sm {{ $opponent['winrate'] >= 50 ? 'text-amber-200' : 'text-violet-300' }}">{{ $opponent['winrate'] }}%</strong><span class="mt-1.5 block h-1 overflow-hidden rounded-full bg-violet-400/15"><span class="block h-full bg-amber-300" style="width:{{ $opponent['winrate'] }}%"></span></span></span><span class="text-slate-600" aria-hidden="true">›</span></span>
             </a>

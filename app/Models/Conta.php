@@ -13,8 +13,8 @@ class Conta extends Model
 
     protected function casts(): array
     {
-        return ['last_game_at' => 'datetime', 'rank_synced_at' => 'datetime',
-            'history_synced_at' => 'datetime', 'pdl' => 'integer', 'wins' => 'integer',
+        return ['decay_reference' => 'array', 'last_game_at' => 'datetime', 'rank_synced_at' => 'datetime',
+            'history_synced_at' => 'datetime', 'solo_history_synced_at' => 'datetime', 'solo_history_window' => 'array', 'pdl' => 'integer', 'wins' => 'integer',
             'losses' => 'integer', 'winrate' => 'float'];
     }
 

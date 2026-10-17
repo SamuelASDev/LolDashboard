@@ -4,7 +4,7 @@ namespace App\Support;
 
 final class GameLabels
 {
-    public const QUEUES = [420 => 'Solo/Duo', 440 => 'Flex'];
+    public const QUEUES = [420 => 'Solo/Duo'];
 
     public const ROLES = ['TOP' => 'Topo', 'JUNGLE' => 'Selva', 'MIDDLE' => 'Meio',
         'BOTTOM' => 'Atirador', 'UTILITY' => 'Suporte', 'UNKNOWN' => 'Não identificada'];

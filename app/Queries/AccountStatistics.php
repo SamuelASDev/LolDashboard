@@ -54,6 +54,7 @@ class AccountStatistics
 
         return [
             'games' => $games, 'wins' => $wins, 'losses' => $games - $wins,
+            'kills' => $kills, 'deaths' => $deaths, 'assists' => $assists,
             'winrate' => $games ? round($wins / $games * 100, 1) : 0,
             'kda' => $deaths > 0 ? number_format(($kills + $assists) / $deaths, 2) : ($games ? 'Perfeito' : '—'),
             'avg_kills' => $games ? round($kills / $games, 1) : 0,

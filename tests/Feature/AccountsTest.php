@@ -140,7 +140,7 @@ class AccountsTest extends TestCase
         for ($i = 0; $i < 25; $i++) {
             $this->matchRecord($conta);
         }
-        $this->actingAs($conta->user)->get('/contas/'.$conta->id)->assertOk()
+        $this->actingAs($conta->user)->get('/contas/'.$conta->id.'?tab=history')->assertOk()
             ->assertViewHas('partidas', fn ($p) => $p->count() === 20 && $p->total() === 25);
     }
 }

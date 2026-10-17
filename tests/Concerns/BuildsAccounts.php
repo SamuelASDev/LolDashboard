@@ -29,10 +29,19 @@ trait BuildsAccounts
 
     protected function matchPayload(string $puuid = 'puuid-1', array $player = [], array $info = []): array
     {
-        return ['info' => array_merge([
+        $payload = ['info' => array_merge([
             'queueId' => 420, 'gameEndTimestamp' => now()->getTimestampMs(), 'gameDuration' => 1800,
-            'participants' => [array_merge(['puuid' => $puuid, 'championName' => 'Ahri', 'win' => true,
+            'participants' => [array_merge(['participantId' => 1, 'teamId' => 100, 'puuid' => $puuid, 'championName' => 'Ahri', 'win' => true,
                 'kills' => 5, 'deaths' => 2, 'assists' => 7, 'individualPosition' => 'MIDDLE'], $player)],
         ], $info)];
+        if (! array_key_exists('participants', $info)) {
+            foreach (range(2, 10) as $slot) {
+                $payload['info']['participants'][] = ['participantId' => $slot, 'puuid' => 'fixture-'.$slot,
+                    'teamId' => $slot <= 5 ? 100 : 200, 'championName' => 'Garen', 'win' => $slot <= 5,
+                    'kills' => 0, 'deaths' => 0, 'assists' => 0, 'teamPosition' => 'UNKNOWN'];
+            }
+        }
+
+        return $payload;
     }
 }

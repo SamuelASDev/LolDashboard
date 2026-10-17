@@ -17,6 +17,11 @@ class RiotMatch extends Model
             'played_at' => 'datetime', 'duration_seconds' => 'integer'];
     }
 
+    public function partidas(): HasMany
+    {
+        return $this->hasMany(Partida::class);
+    }
+
     public function participants(): HasMany
     {
         return $this->hasMany(MatchParticipant::class)->orderBy('team_id')->orderBy('participant_id');

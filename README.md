@@ -46,7 +46,7 @@ Não há credencial padrão ou administrador criado por seed.
 4. Filtre 7, 30, 90, 365 dias ou todo o histórico confirmado.
 5. Cancele uma execução se necessário. Nova sincronização consulta IDs recentes sem duplicar registros confirmados.
 
-Ranking atual e estatísticas do período são métricas diferentes. O total mede participações: duas contas na mesma partida contam como duas participações. Registros antigos sem identidade confirmada são preservados e ficam fora das métricas até serem reencontrados na API. O painel não calcula reserva real de decay; os cortes exibidos são referências consultadas e não garantem promoção.
+Ranking atual e estatísticas do período são métricas diferentes. O total mede participações: duas contas na mesma partida contam como duas participações. Registros antigos sem identidade confirmada são preservados e ficam fora das métricas até serem reencontrados na API. O decay Mestre+ é uma previsão local, com ajuste opcional pelo cliente; os cortes são referências consultadas e não garantem promoção.
 
 ## Qualidade
 
@@ -96,3 +96,14 @@ O painel usa tema roxo escuro e dourado, com gráficos de resultados diários, t
 ## Temporadas
 
 2026 já vem cadastrada como atual. Administradores podem cadastrar próximas temporadas em **Temporadas** e iniciar uma delas para encerrar a anterior no mesmo instante. O histórico é preservado; filtros no dashboard e na conta permitem consultar cada temporada. Selecione “Toda a temporada” para remover o limite móvel de dias. Sincronizações respeitam o intervalo selecionado e o ranking exibido permanece o atual da Riot.
+
+## Acompanhamento de decay Mestre+
+
+Dashboard e detalhes mostram reserva estimada, alerta quando restam até dois dias e possível decay em andamento para Mestre, Grão-Mestre e Desafiante Solo/Duo. A API utilizada não fornece o saldo do cliente nem confirma a causa de uma perda de LP. Sem referência, o painel calcula um intervalo a partir de saldo inicial desconhecido (0–14 dias) e partidas detalhadas importadas na janela recente. Histórico incompleto e mudanças de elo limitam essa previsão.
+
+Nos detalhes, abra **Ajustar reserva de decay pelo cliente** para informar os dias restantes agora (0–14). Depois, a previsão desconta o tempo e soma um dia por partida Solo/Duo confirmada após o ajuste, até 14 dias. Remakes e Flex não acrescentam dias. A contagem usa períodos aproximados de 24 horas; o ciclo diário oficial pode diferir. Confira e corrija a referência no cliente, especialmente após promoção/rebaixamento ou partidas ainda não sincronizadas. O painel não desconta LP do ranking salvo. A penalidade publicada é de 75 LP por dia sem reserva. Embora a Riot também tenha regras de decay no Diamante, este recurso monitora somente Mestre+, conforme escopo do produto.
+
+
+## Dashboard de todas as contas
+
+A página inicial reúne estatísticas, gráficos, histórico, campeões, confrontos, padrões e recordes de todas as suas contas. As sete abas compartilham os filtros das páginas individuais. Totais e taxas usam as participações importadas; histórico e recordes mostram a conta de origem. Duas contas no mesmo jogo contribuem duas participações. Evolução diária é consolidada, com ranking e decay identificados por conta.

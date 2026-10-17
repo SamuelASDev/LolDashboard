@@ -175,7 +175,7 @@ class SeasonsTest extends TestCase
     public function test_additive_migration_backfills_start_without_removing_existing_matches(): void
     {
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
-        Artisan::call('migrate:rollback', ['--step' => 1, '--force' => true]);
+        Artisan::call('migrate:rollback', ['--step' => 3, '--force' => true]);
         $account = $this->account(attributes: ['puuid' => 'p']);
         $match = $this->matchRecord($account, ['played_at' => '2026-01-08 15:10:00', 'duration_seconds' => 1800]);
         Artisan::call('migrate', ['--force' => true]);

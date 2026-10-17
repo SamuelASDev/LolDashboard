@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Sync\StartSync;
-use App\Models\Conta;
 use App\Queries\SelectedSeason;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -16,19 +15,27 @@ class SyncController extends Controller
     public function store(Request $request, int $conta, StartSync $start): RedirectResponse
     {
         $conta = $request->user()->contas()->findOrFail($conta);
-        $options = $request->validate(['mode' => ['sometimes', 'in:recent,full'], 'queue' => ['sometimes', 'integer', 'in:420,440']]);
+        $options = $request->validate(['mode' => ['sometimes', 'in:recent,full'], 'queue' => ['sometimes', 'integer', 'in:420']]);
         $season = app(SelectedSeason::class)->execute($request);
         $start->execute($conta, $options['mode'] ?? 'recent', (int) ($options['queue'] ?? 420), $season);
 
-        return to_route('contas.show', array_merge(['conta' => $conta], $request->only('season'), (int) ($options['queue'] ?? 420) === 440 ? ['queue' => 440] : []))->with('success', 'Sincronização agendada. O progresso aparece abaixo.');
+        return to_route('contas.show', array_merge(['conta' => $conta], $request->only('season')))->with('success', 'Sincronização agendada. O progresso aparece abaixo.');
     }
 
     public function storeAll(Request $request, StartSync $start): RedirectResponse
     {
         $season = app(SelectedSeason::class)->execute($request);
-        $request->user()->contas()->each(fn (Conta $conta) => $start->execute($conta, 'recent', 420, $season));
+        $scheduled = 0;
+        foreach ($request->user()->contas()->orderBy('id')->get() as $conta) {
+            try {
+                $start->execute($conta, 'recent', 420, $season);
+                $scheduled++;
+            } catch (ValidationException) {
+                continue;
+            }
+        }
 
-        return to_route('dashboard', $request->only('season'))->with('success', 'Sincronizações agendadas. Você pode continuar usando o painel.');
+        return to_route('dashboard', $request->only('season'))->with('success', "{$scheduled} conta(s) agendada(s). Os limites por usuario podem deixar outras contas para depois.");
     }
 
     public function status(Request $request, int $conta): JsonResponse

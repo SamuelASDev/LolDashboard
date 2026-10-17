@@ -66,6 +66,9 @@ class RiotService
 
     public function matchIds(string $puuid, RiotRegion $region, int $cursor, int $queueId = 420, ?array $window = null): array
     {
+        if ($queueId !== 420) {
+            throw new RiotException('Fila desativada. Somente Solo/Duo está disponível.');
+        }
         $window ??= HistoryWindow::forRegion($region);
         $data = $this->get($region->routing(), '/lol/match/v5/matches/by-puuid/'.rawurlencode($puuid).'/ids',
             ['queue' => $queueId, 'start' => $cursor, 'count' => config('riot.page_size'),

@@ -154,3 +154,54 @@ O histórico alinha os dois times por posição antes do placar completo. A vis�
 Ritmo de jogo mostra os últimos 21 dias com partidas no recorte, sem preencher lacunas com jogos fictícios. Barras permitem leitura por mouse/teclado; a aba Evolução inclui tabela diária completa. A linha de ranking usa observações reais por classificação/divisão/LP; não mede MMR e não reconstrói LP de jogos anteriores. Gráficos, confrontos e retratos dependem dos dados importados; o estado vazio é esperado após a limpeza das contas.
 
 Os testes em ambiente testing usam o build de assets e um caminho hot isolado em storage/framework/testing/vite.hot. Isso impede que um Vite aberto pelo desenvolvedor recarregue as páginas e cancele navegações durante o Playwright. Execute npm.cmd run build antes dos testes de navegador.
+
+## Reserva estimada de decay Mestre+
+
+Aplique a migration aditiva 2026_10_17_000001 pelo procedimento de atualização, sem reset. Ela adiciona somente decay_reference anulável em contas. Gere novamente os assets e reinicie o worker pelo processo normal, pois o snapshot agora invalida a referência quando a Riot confirma ranking abaixo de Mestre.
+
+O indicador aparece no dashboard e nos detalhes de contas Mestre/Grão-Mestre/Desafiante com identidade e ranking confirmados. Ele acompanha o Solo/Duo atual, mesmo ao consultar Flex ou uma temporada encerrada. Abra **Ajustar reserva de decay pelo cliente** nos detalhes para informar quantos dias restam agora. Salvar registra o horário do servidor; jogos anteriores já fazem parte do saldo informado. Use **Voltar à estimativa automática** para remover o ajuste.
+
+Sem ajuste, o intervalo inicial é desconhecido (0–14 dias) e o histórico recente detalhado alimenta a previsão. Não tome um indicador de proteção estimada como confirmação da Riot. Sincronize Solo/Duo e amplie a importação quando o histórico recente estiver incompleto. Ao informar saldo, confira no cliente se ele corresponde ao momento atual; informe novamente após mudança de elo ou divergência. A referência não é transportada para outra temporada.
+
+A previsão soma 1 dia por jogo elegível, limita a 14 e desconta tempo em períodos aproximados de 24 horas. O horário diário do servidor Riot pode diferir. Sem reserva, mostra **Possível decay em andamento** e a regra de 75 LP/dia; nenhuma perda real é confirmada ou aplicada no banco local. Uma queda de LP isolada não serve como prova. Este recurso não exige novo cron, job ou chamada externa e não implementa monitoramento de decay Diamante ou Flex.
+
+## Jogadores adversários recorrentes
+
+Em **Padrões**, além de Companheiros recorrentes, consulte **Adversários na sua posição** e **Adversários em todas as posições**. Cada lista mostra até dez jogadores, ordenados por partidas em comum, com suas vitórias/derrotas e taxa de vitória. A primeira compara a posição que você ocupou em cada jogo; a segunda inclui todos os jogadores do time adversário, mesmo de outras posições. O filtro Posição continua selecionando suas partidas, não limita a posição dos adversários na lista geral.
+
+Temporada, período, fila e demais filtros da página se aplicam às duas listas. Os resultados dependem dos participantes já importados; resumos sem placar não permitem identificar jogadores. Posições desconhecidas ou duplicadas não são atribuídas arbitrariamente a um confronto direto. A taxa mede o resultado do jogo, não vitória na rota. Não há nova migration, job ou chamada à Riot para esse recurso; basta atualizar a página com o código e assets atuais.
+
+
+## Estatísticas consolidadas no dashboard
+
+A página inicial reúne os dados importados de todas as contas do usuário em sete abas, equivalentes às dos detalhes individuais. Use os filtros acima do resumo para escolher temporada, período, campeão, posição, adversário-campeão e resultado. A fila disponível é Solo/Duo. Os links entre gráficos, confrontos e histórico conservam o contexto global e os filtros. Os cards individuais continuam disponíveis abaixo das análises.
+
+## Atualização: caderno, jogadores e limites — 17/10/2026
+
+Aplicar `php artisan migrate --force` pelo procedimento de atualização, sem fresh/reset. A migration 000002 é aditiva e adiciona cobertura Solo e quatro tabelas privadas. Construir assets, limpar caches pelo procedimento normal e reiniciar workers persistentes. Flex deixa de ser opção; execuções antigas são canceladas quando processadas, sem remover o histórico existente. Cache compartilhado de produção deve ser database/Redis, nunca array: limites de requisições e cache precisam sobreviver entre processos.
+
+O menu **Jogadores** e a busca no topo localizam jogadores do histórico importado, pelo nome/tag conhecido. Abra o resultado para ver partidas com/contra ele e escrever uma anotação privada. Os nomes dos jogadores no placar e em Padrões também abrem esse histórico. Anotações aparecem como indicador nas listas e no placar. Nome pode mudar; a anotação permanece no PUUID. Jogadores sem identidade/placar importado não aparecem. O caderno mantém as anotações existentes mesmo se a conta de origem for removida.
+
+Em Partidas, **Anotar esta partida** permite salvar/remover texto privado (vazio remove). A anotação é a mesma nas participações das suas contas naquela partida. Em filtros, dê um nome e use **Salvar filtro favorito**. Acesse **Meu caderno** para aplicar/remover favoritos, criar/remover metas de partidas, vitórias ou taxa de vitória e consultar jogadores anotados. Metas somam contas em intervalo UTC, mostram a amostra e não incluem Flex, remakes ou legado não confirmado.
+
+Limites configuráveis em workspace.php: 20 contas por usuário, três sincronizações simultâneas, 100 recentes/10 completas por dia UTC; 50 favoritos e 30 metas. O lote agenda até a capacidade disponível e informa o total; contas restantes podem ser solicitadas depois. O mesmo job ativo é reutilizado, sem gastar outra execução. Cadastro público: cinco tentativas/hora/IP e 30/hora na aplicação; recuperação: cinco/minuto/IP; redefinição: dez/minuto/IP. Resposta da recuperação não revela se o destinatário existe.
+
+## Retenção, inventário e recuperação
+
+Política atual: preservar indefinidamente partidas pessoais e cache referenciado; nenhuma limpeza automática. Cache sem referência com mais de 180 dias é apenas candidato a revisão, nunca excluído pelo comando. Anotações são dados pessoais privados e entram no backup. A retenção operacional de backups deve respeitar o orçamento e a política definida pelo proprietário; antes de qualquer descarte, manter cópia restaurável fora do servidor.
+
+Executar `php artisan dashboard:storage-health` após importações amplas e ao menos semanalmente. Relata partidas, caches, tamanho aproximado dos payloads JSON e órfãos antigos. É somente leitura; o teste verifica que não exclui histórico/cache. O tamanho JSON não mede índices, participantes, logs, backups nem espaço físico do MySQL. Conferir também uso real no painel da hospedagem; configurar alerta do provedor antes de atingir a cota contratada. Não foi verificada a quota real do plano Business.
+
+Procedimento de backup antes de atualização e periodicamente:
+
+1. Confirmar um backup recente do banco inteiro e dos arquivos privados necessários (configuração/segredos em cofre separado, nunca no repositório). No painel/exportador MySQL, incluir schema, dados, índices e constraints de todas as tabelas. Para dump transacional, usar a opção single-transaction de ferramenta compatível com o servidor. Não informar senha na linha de comando nem versionar dumps.
+2. Salvar cópia criptografada em local separado do servidor. Registrar data, tamanho e checksum; limitar quem pode ler notas/e-mails. Verificar o resultado do exportador, não apenas a existência do arquivo.
+3. Restaurar em **outro banco e aplicação isolada**, nunca sobre o banco ativo. Usar credenciais/configuração próprias, bloquear saída de e-mail/Riot e suspender workers/scheduler nesse ambiente antes da restauração. Não reutilizar a chave de produção para testes.
+4. Conferir migrations, contagens de usuários/contas/partidas/participantes/temporadas/notas/metas/favoritos, unicidade de partidas, uma temporada atual e integridade de chaves. Fazer login com usuário de teste, conferir histórico/placar/caderno e isolamento entre dois usuários. Comparar amostras com o backup.
+5. Registrar duração e resultado da restauração; só então considerar o backup comprovado. Excluir a cópia de homologação pelo procedimento autorizado após a verificação. Uma restauração real na Hostinger permanece pendente; documentação e testes SQLite não comprovam essa operação.
+
+A visão geral mostra combate, economia, visão, gráficos e totais de abates/mortes/assistências, além de totais aditivos junto às médias. Campeões, posições, padrões, companheiros e adversários recorrentes consideram todas as participações selecionadas. Partidas e recordes identificam a conta de origem. Histórico possui paginação de 20 participações.
+
+Se duas contas suas estiverem na mesma partida, ambas contribuem para o consolidado: a unidade de contagem é participação por conta. Taxas e médias são recalculadas pelos dados de todas as partidas, sem somar porcentagens ou tirar média simples dos indicadores de cada conta. Métricas ausentes e resumos ainda sem detalhes podem limitar gráficos/indicadores. Na aba Evolução, resultados diários são consolidados e os gráficos de ranking ficam separados por conta; ranking e decay continuam com suas referências individuais.
+
+Não há migração nem reinício de worker específico para esta mudança. Atualize o código/assets e recarregue o dashboard. Testes de navegador devem rodar depois dos testes PHP/compilação Blade para evitar disputa dos arquivos compilados no Windows.

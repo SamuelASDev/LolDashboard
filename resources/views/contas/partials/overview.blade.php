@@ -9,7 +9,7 @@
         </div>
     </section>
     <section class="panel overflow-hidden">
-        <div class="section-heading"><div><h2 class="section-title">Ritmo de jogo</h2><p class="mt-1 text-[11px] text-slate-500">Volume e resultado das suas partidas por dia</p></div><a class="section-link" href="{{ route('contas.show', array_merge(request()->except('page'), ['conta'=>$conta,'tab'=>'progress'])) }}">Ver evolução →</a></div>
+        <div class="section-heading"><div><h2 class="section-title">Ritmo de jogo</h2><p class="mt-1 text-[11px] text-slate-500">Volume e resultado das suas partidas por dia</p></div><a class="section-link" href="{{ $analyticsUrl(['tab'=>'progress']) }}">Ver evolução →</a></div>
         <div class="px-5 pb-5"><x-daily-chart :points="$dailyChart" /></div>
     </section>
 </div>
@@ -24,7 +24,7 @@
                 $share = $insight['total'] ? round($group['games'] / $insight['total'] * 100) : 0;
             @endphp
             @if($role !== 'UNKNOWN' || $group['games'])
-            <a href="{{ route('contas.show', array_merge(request()->except('page'), ['conta'=>$conta,'tab'=>'matchups','role'=>$role])) }}" class="group flex items-center gap-3">
+            <a href="{{ $analyticsUrl(['tab'=>'matchups','role'=>$role]) }}" class="group flex items-center gap-3">
                 <span class="text-violet-300"><x-role-icon :role="$role" /></span>
                 <div class="min-w-0 flex-1"><div class="mb-1.5 flex justify-between gap-2 text-xs"><span class="text-slate-300 group-hover:text-amber-200">{{ $label }}</span><span class="text-slate-500">{{ $group['games'] }} jogos · {{ $share }}%</span></div><div class="h-1.5 overflow-hidden rounded-full bg-violet-400/10"><div class="h-full rounded-full bg-violet-400" style="width:{{ $share }}%"></div></div></div>
             </a>
@@ -33,10 +33,10 @@
         </div>
     </section>
     <section class="panel overflow-hidden">
-        <div class="section-heading"><h2 class="section-title">Campeões em destaque</h2><a class="section-link" href="{{ route('contas.show', array_merge(request()->except('page'), ['conta'=>$conta,'tab'=>'champions'])) }}">Todos →</a></div>
+        <div class="section-heading"><h2 class="section-title">Campeões em destaque</h2><a class="section-link" href="{{ $analyticsUrl(['tab'=>'champions']) }}">Todos →</a></div>
         <div class="space-y-3 p-5">
         @forelse($champions->take(4) as $champion)
-            <a href="{{ route('contas.show', array_merge(request()->except('page'), ['conta'=>$conta,'tab'=>'history','champion'=>$champion['champion_name']])) }}" class="matchup-row">
+            <a href="{{ $analyticsUrl(['tab'=>'history','champion'=>$champion['champion_name']]) }}" class="matchup-row">
                 <span class="flex min-w-0 items-center gap-3"><x-game-icon :id="$champion['champion_id']" :name="$champion['champion_name']" size="h-10 w-10" /><span><strong class="block text-sm">{{ $champion['champion_name'] }}</strong><small class="text-[10px] text-slate-500">{{ $champion['games'] }} jogos · {{ $champion['kda'] }} KDA</small></span></span>
                 <span class="text-sm font-bold {{ $champion['winrate'] >= 50 ? 'text-amber-200' : 'text-violet-300' }}">{{ $champion['winrate'] }}%</span>
             </a>
@@ -49,7 +49,7 @@
 <section class="panel overflow-hidden">
     <div class="section-heading"><h2 class="section-title">{{ $category }}</h2><span class="text-[10px] text-slate-500">Médias pessoais</span></div>
     <dl class="grid grid-cols-2 gap-x-5 gap-y-6 p-5">
-    @foreach($metrics as $metric)<div><dt class="text-[10px] text-slate-500">{{ $metricLabels[$metric] }}</dt><dd class="mt-1 text-xl font-semibold text-amber-50">{{ \App\Support\GameLabels::number($insight['averages'][$metric]['value'] ?? null,1) }}</dd><dd class="mt-0.5 text-[9px] text-slate-600">{{ $insight['averages'][$metric]['sample'] ?? 0 }} partidas com valor</dd></div>@endforeach
+    @foreach($metrics as $metric)<div><dt class="text-[10px] text-slate-500">{{ $metricLabels[$metric] }}</dt><dd class="mt-1 text-xl font-semibold text-amber-50">{{ \App\Support\GameLabels::number($insight['averages'][$metric]['value'] ?? null,1) }}</dd><dd class="mt-0.5 text-[9px] text-slate-600">{{ $insight['averages'][$metric]['sample'] ?? 0 }} partidas com valor</dd>@if($aggregate && !in_array($metric, ['damage_per_minute','gold_per_minute','cs_per_minute','kill_participation']))<dd class="mt-1 text-[10px] text-violet-300">Total: {{ \App\Support\GameLabels::number($insight['sums'][$metric] ?? null) }}</dd>@endif</div>@endforeach
     </dl>
 </section>
 @endforeach

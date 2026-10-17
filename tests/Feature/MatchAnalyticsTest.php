@@ -15,7 +15,6 @@ use App\Support\HistoryWindow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Queue;
 use Tests\Concerns\BuildsAccounts;
 use Tests\TestCase;
 
@@ -100,7 +99,7 @@ class MatchAnalyticsTest extends TestCase
         $this->actingAs($account->user)->get('/contas/'.$account->id.'?tab=history&champion=Zed')
             ->assertOk()->assertDontSee('Jogador 10#BR1');
         $this->get('/contas/'.$account->id.'?tab=history&result=loss')->assertOk()->assertDontSee('Jogador 10#BR1');
-        $this->get('/contas/'.$account->id.'?tab=history&queue=440')->assertOk()->assertDontSee('Jogador 10#BR1');
+        $this->get('/contas/'.$account->id.'?tab=history&queue=440')->assertSessionHasErrors('queue');
         $other = $this->account();
         $this->actingAs($other->user)->get('/contas/'.$account->id.'?tab=history')->assertNotFound();
         $this->actingAs($account->user)->get('/contas/'.$account->id.'?queue=999')->assertSessionHasErrors('queue');
@@ -176,7 +175,7 @@ class MatchAnalyticsTest extends TestCase
         }
     }
 
-    public function test_recent_window_finishes_without_more_network_and_flex_is_requested_explicitly(): void
+    public function test_recent_window_finishes_without_more_network_and_client_rejects_flex(): void
     {
         $account = $this->account(attributes: ['puuid' => 'p']);
         Http::fake(['*/ids*' => Http::response([])]);
@@ -185,27 +184,25 @@ class MatchAnalyticsTest extends TestCase
         app(AdvanceSync::class)->execute($run);
         $this->assertSame('completed', $run->status);
         Http::assertNothingSent();
-        app(RiotService::class)->matchIds('p', RiotRegion::BR, 0, 440);
-        Http::assertSent(fn ($request) => $request['queue'] === 440);
+        try {
+            app(RiotService::class)->matchIds('p', RiotRegion::BR, 0, 440);
+            $this->fail('Fila desativada foi enviada para a Riot.');
+        } catch (RiotException) {
+            Http::assertNothingSent();
+        }
     }
 
-    public function test_flex_import_keeps_solo_activity_and_uses_its_own_statistics_and_redirect(): void
+    public function test_flex_is_rejected_without_changing_existing_history(): void
     {
-        Queue::fake();
-        $activity = now()->subDays(2)->startOfSecond();
-        $account = $this->account(attributes: ['puuid' => 'player-1', 'last_game_at' => $activity]);
+        $account = $this->account(attributes: ['puuid' => 'puuid-1']);
+        $legacy = $this->matchRecord($account, ['queue_id' => 440]);
         $payload = $this->completePayload();
         $payload['info']['queueId'] = 440;
-        app(ImportMatch::class)->execute($account, 'BR1_FLEX', $payload);
-        $this->assertTrue($account->fresh()->last_game_at->equalTo($activity));
-        $stats = app(AccountStatistics::class);
-        $this->assertSame(0, $stats->summary($stats->base($account->user, 30, $account))['games']);
-        $this->assertSame(1, $stats->summary($stats->base($account->user, 30, $account, 440))['games']);
-        $this->actingAs($account->user)->get('/contas/'.$account->id.'?queue=440&tab=history')
-            ->assertOk()->assertSee('Jogador 10#BR1');
-        $this->post('/contas/'.$account->id.'/sync', ['mode' => 'full', 'queue' => 440])
-            ->assertRedirect('/contas/'.$account->id.'?queue=440');
-        $this->assertDatabaseHas('sync_runs', ['conta_id' => $account->id, 'mode' => 'full', 'queue_id' => 440]);
+        $this->assertFalse(app(ImportMatch::class)->execute($account, 'BR1_FLEX', $payload));
+        $this->assertDatabaseHas('partidas', ['id' => $legacy->id, 'queue_id' => 440]);
+        $this->actingAs($account->user)->get('/contas/'.$account->id.'?queue=440')->assertSessionHasErrors('queue');
+        $this->post('/contas/'.$account->id.'/sync', ['mode' => 'full', 'queue' => 440])->assertSessionHasErrors('queue');
+        Http::assertNothingSent();
     }
 
     public function test_ambiguous_enemy_position_is_not_assigned_an_arbitrary_opponent(): void

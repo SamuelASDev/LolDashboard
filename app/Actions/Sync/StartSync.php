@@ -16,6 +16,10 @@ class StartSync
 {
     public function execute(Conta $conta, string $mode = 'recent', int $queueId = 420, ?Season $season = null): SyncRun
     {
+        if ($queueId !== 420 || ! in_array($mode, ['recent', 'full'], true)) {
+            throw ValidationException::withMessages(['sync' => 'Somente Solo/Duo e modos recent/full sao permitidos.']);
+        }
+
         if (! in_array(config('queue.connections.'.config('riot.queue_connection').'.driver'), ['database', 'redis', 'sqs', 'beanstalkd'], true)) {
             throw ValidationException::withMessages(['sync' => 'Configure uma fila assíncrona para sincronizar.']);
         }
@@ -26,6 +30,11 @@ class StartSync
             $active = $conta->syncRuns()->whereNotNull('active_conta_id')->first();
             if ($active) {
                 return $active;
+            }
+            $runs = SyncRun::whereHas('conta', fn ($q) => $q->where('user_id', $conta->user_id));
+            if ((clone $runs)->whereNotNull('active_conta_id')->count() >= config('workspace.max_active_syncs')
+                || (clone $runs)->where('mode', $mode)->where('created_at', '>=', now()->startOfDay())->count() >= config('workspace.daily_'.$mode.'_syncs')) {
+                throw ValidationException::withMessages(['sync' => 'Limite de sincronizacoes atingido. Aguarde as tarefas atuais terminarem ou tente no proximo dia.']);
             }
             $region = RiotRegion::tryFrom($conta->regiao);
             if (! $region) {

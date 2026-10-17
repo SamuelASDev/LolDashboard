@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Sync\RefreshRankCutoffs;
 use App\Actions\Users\ManageUser;
 use App\Models\AuditEvent;
 use App\Models\User;
@@ -11,6 +12,18 @@ use Illuminate\View\View;
 
 class AdminController extends Controller
 {
+    public function refreshCutoffs(RefreshRankCutoffs $refresh): RedirectResponse
+    {
+        $status = $refresh->execute(force: true);
+
+        return to_route('admin.index')->with(in_array($status, ['failed', 'partial'], true) ? 'error' : 'status', match ($status) {
+            'updated' => 'Cortes atualizados com sucesso.',
+            'busy' => 'Outra atualização dos cortes está em andamento. Aguarde e recarregue a página.',
+            'partial' => 'Algumas regiões não puderam ser atualizadas. Os últimos valores dessas regiões foram preservados.',
+            default => 'Não foi possível atualizar os cortes. Os últimos valores foram preservados. Tente novamente mais tarde.',
+        });
+    }
+
     public function index(Request $request): View
     {
         return view('admin.index', [

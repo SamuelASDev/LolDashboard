@@ -42,6 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/usuarios', [AdminController::class, 'index'])->middleware('staff')->name('index');
         Route::middleware('admin')->group(function () {
+            Route::post('/cortes/atualizar', [AdminController::class, 'refreshCutoffs'])->middleware('throttle:1,1')->name('cutoffs.refresh');
             Route::get('/temporadas', [SeasonController::class, 'index'])->name('seasons.index');
             Route::post('/temporadas', [SeasonController::class, 'store'])->name('seasons.store');
             Route::post('/temporadas/{season}/iniciar', [SeasonController::class, 'activate'])->whereNumber('season')->name('seasons.activate');

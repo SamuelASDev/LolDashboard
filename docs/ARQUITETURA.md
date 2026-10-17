@@ -120,6 +120,8 @@ RefreshRankCutoffs realiza uma única consulta global por dia civil de Brasília
 
 O comando riot:cutoffs é agendado às 03:10 America/Sao_Paulo; --force é uma opção operacional explícita para repetir a consulta do dia. Não existe fallback 600, fórmula GM+400 ou integração desse scraper no job individual de contas.
 
+O POST /admin/cortes/atualizar exige autenticação, e-mail verificado e cargo admin. O botão em Administração → Usuários chama a mesma ação com force=true, em uma consulta pública síncrona com timeout de 15 segundos, sem depender do worker. Mantém o lock compartilhado e a preservação dos valores em falha; o endpoint limita tentativas a uma por minuto por administrador e devolve feedback de sucesso, falha, resultado parcial ou execução concorrente. A agenda diária permanece inalterada.
+
 ## Temporadas cadastradas e limites das buscas
 
 Season mantém o catálogo com estados draft, active e ended. A migration 000004 cadastra apenas 2026 como atual e conserva os seis horários regionais de início já adotados (08/01 ao meio-dia do servidor; BR 15h UTC). As próximas temporadas são cadastradas pelo administrador sem iniciar a contagem.

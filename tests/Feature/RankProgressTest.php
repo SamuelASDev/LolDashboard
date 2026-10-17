@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Actions\Sync\RefreshRankCutoffs;
 use App\Enums\RiotRegion;
 use App\Models\RankCutoff;
+use App\Models\User;
 use App\Queries\RankProgress;
 use App\Services\ReplaysCutoffSource;
 use Carbon\CarbonImmutable;
@@ -30,6 +31,61 @@ class RankProgressTest extends TestCase
         return '<html><h2>999999 LP</h2><script id="__NEXT_DATA__" type="application/json">'.
             json_encode(['query' => ['region' => 'BR', 'rank' => 'grandmaster'],
                 'props' => ['pageProps' => ['cutoffData' => $catalog]]]).'</script></html>';
+    }
+
+    public function test_admin_can_refresh_cutoffs_after_the_daily_attempt_and_repeated_posts_are_throttled(): void
+    {
+        Http::fake([ReplaysCutoffSource::URL => Http::response($this->page())]);
+        app(RefreshRankCutoffs::class)->execute();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->get(route('admin.index'))->assertOk()->assertSee('Atualizar cortes agora');
+        Http::assertSentCount(1);
+        $this->post(route('admin.cutoffs.refresh'))->assertRedirect(route('admin.index'))
+            ->assertSessionHas('status', 'Cortes atualizados com sucesso.');
+        Http::assertSentCount(2);
+        $this->post(route('admin.cutoffs.refresh'))->assertStatus(429);
+        Http::assertSentCount(2);
+    }
+
+    public function test_manual_refresh_requires_a_verified_admin_and_is_hidden_from_moderators(): void
+    {
+        Http::fake();
+        $this->post(route('admin.cutoffs.refresh'))->assertRedirect(route('login'));
+        foreach (['user', 'mod'] as $role) {
+            $this->actingAs(User::factory()->create(['role' => $role]))
+                ->post(route('admin.cutoffs.refresh'))->assertForbidden();
+        }
+        $this->get(route('admin.index'))->assertOk()->assertDontSee('Atualizar cortes agora');
+        $this->actingAs(User::factory()->unverified()->create(['role' => 'admin']))
+            ->post(route('admin.cutoffs.refresh'))->assertRedirect(route('verification.notice'));
+        Http::assertNothingSent();
+    }
+
+    public function test_manual_refresh_reports_failure_and_preserves_existing_cutoffs(): void
+    {
+        Http::fake([ReplaysCutoffSource::URL => Http::sequence()->push($this->page())->push('unavailable', 503)]);
+        app(RefreshRankCutoffs::class)->execute();
+        $this->actingAs(User::factory()->create(['role' => 'admin']))
+            ->post(route('admin.cutoffs.refresh'))->assertRedirect(route('admin.index'))
+            ->assertSessionHas('error', 'Não foi possível atualizar os cortes. Os últimos valores foram preservados. Tente novamente mais tarde.');
+        $this->assertDatabaseHas('rank_cutoffs', ['region' => 'br1', 'tier' => 'GRANDMASTER', 'lp' => 900]);
+        Http::assertSentCount(2);
+    }
+
+    public function test_manual_refresh_reports_partial_results_and_a_busy_lock(): void
+    {
+        Http::fake([ReplaysCutoffSource::URL => Http::response($this->page(['br1' => ['grandmaster' => 1200, 'challenger' => 500]]))]);
+        $this->actingAs(User::factory()->create(['role' => 'admin']))
+            ->post(route('admin.cutoffs.refresh'))->assertSessionHas('error', 'Algumas regiões não puderam ser atualizadas. Os últimos valores dessas regiões foram preservados.');
+        $this->travel(61)->seconds();
+        $lock = Cache::lock('rank-cutoffs:refresh', 120);
+        $lock->get();
+        try {
+            $this->post(route('admin.cutoffs.refresh'))->assertSessionHas('status', 'Outra atualização dos cortes está em andamento. Aguarde e recarregue a página.');
+            Http::assertSentCount(1);
+        } finally {
+            $lock->release();
+        }
     }
 
     public static function ordinaryRanks(): array

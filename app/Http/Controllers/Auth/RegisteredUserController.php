@@ -46,6 +46,9 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        $request->session()->regenerate();
+        $request->session()->forget('url.intended');
+
+        return to_route('verification.notice');
     }
 }

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('contas', function (Blueprint $table) {
             $table->id();
-            
+
             // Relacionamento com o usuário logado
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
 

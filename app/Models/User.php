@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -22,11 +23,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role', // Adicionado para permitir o nível de acesso
     ];
 
     // 🔗 Um usuário tem muitas contas
-    public function contas()
+    public function contas(): HasMany
     {
         return $this->hasMany(Conta::class);
     }

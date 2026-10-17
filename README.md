@@ -1,59 +1,109 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# LoL Dashboard
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Painel de contas de League of Legends com ranking Solo/Duo, histórico confirmado por PUUID e desempenho por campeão. Laravel 12, PHP 8.2+, Blade, Alpine, Tailwind 4 e Vite. Interface em português e responsiva.
 
-## About Laravel
+## Comece por aqui
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Agentes: leia [AGENTS.md](AGENTS.md) e o [diário técnico](docs/DIARIO_DO_PROJETO.md) antes de alterar o projeto.
+- Estrutura e decisões: [arquitetura](docs/ARQUITETURA.md).
+- Instalação, atualização e produção: [operação](docs/OPERACAO.md).
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Instalação limpa
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Requer PHP 8.2+ com extensões Laravel/PDO SQLite (ou MySQL/PostgreSQL), Composer 2 e Node 22.12+; validado com PHP 8.2 e Node 24. Navegadores modernos: Chrome 111+, Safari 16.4+, Firefox 128+ por causa do Tailwind 4.
 
-## Learning Laravel
+~~~powershell
+composer install
+Copy-Item .env.example .env
+php artisan key:generate
+New-Item -ItemType File database/database.sqlite
+php artisan migrate
+npm.cmd ci
+npm.cmd run build
+~~~
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+A cópia do `.env`, a criação do SQLite e a geração de chave são apenas para instalação nova. Não sobrescreva configuração, banco ou chave de uma instalação existente.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Preencha `RIOT_KEY` no `.env`. A chave fica no servidor; não aparece em URLs ou no bundle. Configure um provedor de e-mail: o acesso ao painel exige confirmação de e-mail. O mailer `log` do exemplo é para desenvolvimento; o link pode ser consultado localmente em `storage/logs/laravel.log`.
 
-## Laravel Sponsors
+~~~powershell
+composer dev
+~~~
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+O comando inicia servidor web, Vite, worker Riot e scheduler. Registre seu usuário no endereço exibido. A conexão da fila é definida por `RIOT_QUEUE_CONNECTION` (padrão `database`). Para promover um usuário existente, execute no console seguro:
 
-### Premium Partners
+~~~powershell
+php artisan app:promote-admin seu-email@example.com
+~~~
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Não há credencial padrão ou administrador criado por seed.
 
-## Contributing
+## Uso
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+1. Adicione apelido, Riot ID (`Nome#TAG`) e região.
+2. Sincronize para confirmar a identidade, consultar ranking e importar o histórico disponível.
+3. Acompanhe o progresso nos detalhes; o painel continua utilizável durante o processamento.
+4. Filtre 7, 30, 90, 365 dias ou todo o histórico confirmado.
+5. Cancele uma execução se necessário. Nova sincronização consulta IDs recentes sem duplicar registros confirmados.
 
-## Code of Conduct
+Ranking atual e estatísticas do período são métricas diferentes. O total mede participações: duas contas na mesma partida contam como duas participações. Registros antigos sem identidade confirmada são preservados e ficam fora das métricas até serem reencontrados na API. O decay Mestre+ é uma previsão local, com ajuste opcional pelo cliente; os cortes são referências consultadas e não garantem promoção.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Qualidade
 
-## Security Vulnerabilities
+~~~powershell
+php artisan test
+php vendor/bin/pint --test
+npm.cmd test
+npm.cmd run build
+composer audit
+npm.cmd audit
+~~~
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Testes PHP usam SQLite em memória e bloqueiam HTTP não simulado. Para testes de navegador:
 
-## License
+~~~powershell
+npx playwright install chromium
+npm.cmd run test:browser
+~~~
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Eles criam exclusivamente `storage/framework/testing/browser.sqlite`, com usuários fictícios e chave de teste; recusam banco diferente. Não rode workers sobre esse banco. Pode usar Chrome instalado definindo `PLAYWRIGHT_BROWSER_EXECUTABLE`. Screenshots ficam em `storage/framework/testing/screenshots/`, ignorado pelo Git.
+
+CI executa testes PHP/JavaScript/navegador, Pint, build, cache de rotas e auditorias. Os JSONs em `docs/auditorias/` são retratos históricos, não garantias de ausência de avisos futuros.
+
+## Segurança e suporte
+
+Usuários acessam apenas suas contas. Moderadores consultam usuários; administradores alteram cargos user/mod e podem excluir usuários não administrativos, com auditoria. Administradores não podem ser removidos/rebaixados pelo painel; o último admin não pode excluir o próprio perfil.
+
+Use cache centralizado quando houver múltiplos workers. Leia [operação](docs/OPERACAO.md) antes de publicar.
+
+LoL Dashboard não é endossado pela Riot Games. League of Legends e Riot Games são marcas de seus respectivos titulares.
+
+### Análise pessoal e partidas
+
+Nos detalhes da conta, use as abas para consultar histórico com placar dos dois times, campeões, builds, runas, objetivos, métricas de farm/dano/visão, padrões, recordes e evolução observada da liga. Filtros incluem período, fila Solo/Duo ou Flex, campeão, adversário, posição e resultado. A barra de campeões resume os últimos 20 jogos do recorte.
+
+A sincronização comum prioriza até 60 jogos recentes. Para detalhes antigos, selecione a temporada e use sua opção de importação. Não são necessárias consultas individuais aos outros jogadores nem uma base externa de médias. Consulte docs/OPERACAO.md para operação da fila e atualização do catálogo público com npm.cmd run assets:update.
+
+### Progresso até o próximo elo
+
+Dashboard e detalhes exibem barras de progresso Solo/Duo. Ferro–Diamante usam divisão e LP; Mestre+ usam cortes independentes de Grão-Mestre e Desafiante, consultados diariamente no Replays.lol. A fonte/data são exibidas e falhas preservam o último valor com aviso. O scheduler atualiza às 03:10 de Brasília. Para atualização inicial/manual: php artisan riot:cutoffs; consulte OPERACAO.md antes de usar --force.
+
+### Interface e confrontos
+
+O painel usa tema roxo escuro e dourado, com gráficos de resultados diários, taxa de vitória e evolução observada do ranking. Na aba Confrontos, consulte os adversários por posição com retratos dos campeões e abra as partidas correspondentes. O histórico possui prévia dos times alinhados por rota e visão compacta por padrão. Os gráficos usam o próprio histórico, sem novas chamadas autenticadas à Riot.
+
+
+## Temporadas
+
+2026 já vem cadastrada como atual. Administradores podem cadastrar próximas temporadas em **Temporadas** e iniciar uma delas para encerrar a anterior no mesmo instante. O histórico é preservado; filtros no dashboard e na conta permitem consultar cada temporada. Selecione “Toda a temporada” para remover o limite móvel de dias. Sincronizações respeitam o intervalo selecionado e o ranking exibido permanece o atual da Riot.
+
+## Acompanhamento de decay Mestre+
+
+Dashboard e detalhes mostram reserva estimada, alerta quando restam até dois dias e possível decay em andamento para Mestre, Grão-Mestre e Desafiante Solo/Duo. A API utilizada não fornece o saldo do cliente nem confirma a causa de uma perda de LP. Sem referência, o painel calcula um intervalo a partir de saldo inicial desconhecido (0–14 dias) e partidas detalhadas importadas na janela recente. Histórico incompleto e mudanças de elo limitam essa previsão.
+
+Nos detalhes, abra **Ajustar reserva de decay pelo cliente** para informar os dias restantes agora (0–14). Depois, a previsão desconta o tempo e soma um dia por partida Solo/Duo confirmada após o ajuste, até 14 dias. Remakes e Flex não acrescentam dias. A contagem usa períodos aproximados de 24 horas; o ciclo diário oficial pode diferir. Confira e corrija a referência no cliente, especialmente após promoção/rebaixamento ou partidas ainda não sincronizadas. O painel não desconta LP do ranking salvo. A penalidade publicada é de 75 LP por dia sem reserva. Embora a Riot também tenha regras de decay no Diamante, este recurso monitora somente Mestre+, conforme escopo do produto.
+
+
+## Dashboard de todas as contas
+
+A página inicial reúne estatísticas, gráficos, histórico, campeões, confrontos, padrões e recordes de todas as suas contas. As sete abas compartilham os filtros das páginas individuais. Totais e taxas usam as participações importadas; histórico e recordes mostram a conta de origem. Duas contas no mesmo jogo contribuem duas participações. Evolução diária é consolidada, com ranking e decay identificados por conta.

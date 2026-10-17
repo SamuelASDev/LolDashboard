@@ -716,3 +716,13 @@ Snapshots atuais: [Composer](auditorias/2026-10-16-pos-refatoracao-composer.json
 - Achados atualizados (IDs e status): A14/A19/A20 ampliados com intervenção manual pela interface e testes; análise confirmou que abrir páginas continua sem buscar cortes na rede. Nenhuma nova falha de aplicação evidenciada nas verificações.
 - Limitações e pendências: consulta pública real não executada; clique e respostas testados no backend com HTTP fake, navegador verificou renderização/navegação. Suíte completa de navegador e auditorias não repetidas; dependências não mudaram. Sem commit/push, deploy ou acesso à hospedagem. A fonte externa continua sujeita a indisponibilidade e mudanças de formato.
 - Próximo passo recomendado: publicar pelo fluxo habitual, atualizar caches de rotas/views e abrir Usuários com admin para usar o botão; não requer migration ou nova cron.
+
+### 2026-10-17 — Entrada 032: integração da atualização manual dos cortes na main
+
+- Objetivo: integrar a dev já enviada pelo usuário na main e publicar no origin, conforme solicitação explícita.
+- Alterações e justificativa: conferidos estado limpo, branches e remoto após fetch; dev e origin/dev em e6dadb1, com o botão manual dos cortes. Registro desta publicação na dev e integração por merge na main, preservando o histórico e sem force push.
+- Arquivos afetados: este diário nesta etapa; o conteúdo funcional integrado é o conjunto descrito na Entrada 031.
+- Verificações executadas e resultados: status, diferenças entre branches, histórico e git diff --check conferidos. A Entrada 031 registra 183 testes PHP, três JavaScript, dois cenários de navegador e build aprovados; não repetidos porque não houve nova mudança funcional.
+- Achados atualizados (IDs e status): sem novos achados; mantidas as condições e limitações da Entrada 031.
+- Limitações e pendências: publicação Git não executa deploy nem atualiza caches na hospedagem; nenhuma operação remota de banco, cron ou API.
+- Próximo passo recomendado: atualizar a hospedagem a partir da main pelo procedimento habitual e renovar caches de rotas/views.

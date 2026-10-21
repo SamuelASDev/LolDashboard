@@ -7,5 +7,4 @@ return [
     'daily_full_syncs' => 10,
     'max_favorites' => 50,
     'max_goals' => 30,
-    'orphan_retention_days' => 180,
 ];

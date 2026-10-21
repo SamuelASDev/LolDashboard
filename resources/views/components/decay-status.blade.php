@@ -1,6 +1,6 @@
 @props(['decay', 'account', 'compact' => false])
 @if($decay)
-<section class="mt-4 rounded-lg border p-4 {{ $decay['status'] === 'possible_decay' ? 'border-rose-400/30 bg-rose-400/5' : ($decay['status'] === 'protected' ? 'border-violet-400/20 bg-violet-400/5' : 'border-amber-400/30 bg-amber-400/5') }}" aria-label="Decay Solo/Duo">
+<section class="mt-4 rounded-lg border p-4 {{ $decay['status'] === 'possible_decay' ? 'border-rose-400/30 bg-rose-400/5' : ($decay['status'] === 'protected' ? 'border-cyan-400/20 bg-cyan-400/5' : 'border-amber-400/30 bg-amber-400/5') }}" aria-label="Decay Solo/Duo">
     <div class="flex flex-wrap items-center justify-between gap-2">
         <h3 class="text-xs font-semibold text-slate-200">Decay · Solo/Duo Mestre+</h3>
         <span class="text-[10px] text-slate-400">Estimativa{{ $decay['manual'] ? ' com referência do cliente' : ' automática' }}</span>
@@ -25,7 +25,7 @@
     @if($decay['stale'])<p class="mt-2 text-xs text-amber-300">Dados incompletos ou desatualizados. Sincronize Solo/Duo antes de confiar na previsão.</p>@endif
     <p class="mt-2 text-[10px] leading-relaxed text-slate-400">{{ $decay['manual'] ? 'Base: dias informados por você' : 'Saldo inicial desconhecido (0–14 dias)' }} + partidas importadas. O horário diário da Riot pode diferir. Perda real de LP não confirmada.</p>
     @if($compact)
-        <a class="mt-3 inline-block text-xs text-violet-300 underline" href="{{ route('contas.show', $account) }}#decay-reference">Conferir e ajustar reserva</a>
+        <a class="mt-3 inline-block text-xs text-cyan-300 underline" href="{{ route('contas.show', $account) }}#decay-reference">Conferir e ajustar reserva</a>
     @endif
 </section>
 @endif

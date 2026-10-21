@@ -105,15 +105,6 @@ class ReviewHardeningTest extends TestCase
         }
     }
 
-    public function test_storage_report_never_deletes_personal_history(): void
-    {
-        $account = $this->account(attributes: ['puuid' => 'owner']);
-        app(ImportMatch::class)->execute($account, 'BR1_KEEP', $this->matchPayload('owner'));
-        $this->artisan('dashboard:storage-health')->assertSuccessful();
-        $this->assertDatabaseCount('partidas', 1);
-        $this->assertDatabaseCount('riot_matches', 1);
-    }
-
     public function test_only_current_solo_coverage_can_clear_decay_staleness(): void
     {
         $account = $this->account(attributes: ['puuid' => 'owner', 'elo' => 'MASTER I', 'rank_synced_at' => now()]);

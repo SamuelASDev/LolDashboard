@@ -8,7 +8,7 @@
 @endphp
 <div class="mb-5 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
     <a href="{{ route('dashboard', ['days' => $days, 'season' => $season->id]) }}" class="hover:text-amber-200">← Suas contas</a>
-    <span>Temporada {{ $season->name }} <span class="mx-2 text-violet-400/40">/</span> {{ strtoupper($conta->regiao) }}</span>
+    <span>Temporada {{ $season->name }} <span class="mx-2 text-cyan-400/40">/</span> {{ strtoupper($conta->regiao) }}</span>
 </div>
 <header class="profile-hero mb-5">
     @if($splash)<img src="{{ $splash }}" alt="" aria-hidden="true" class="hero-art">@endif
@@ -27,8 +27,8 @@
             </div>
             <p class="mt-4 text-[10px] text-slate-500">Última consulta de ranking: {{ $conta->rank_synced_at?->timezone('America/Sao_Paulo')->format('d/m/Y · H:i') ?? 'ainda não realizada' }}</p>
         </div>
-        <aside class="rounded-lg border border-violet-300/15 bg-[#130d1e]/85 p-5" aria-label="Classificação Solo/Duo">
-            <p class="eyebrow text-violet-300">Ranqueada Solo/Duo · Ranking atual</p>
+        <aside class="rank-panel rounded-md border p-5" aria-label="Classificação Solo/Duo">
+            <p class="eyebrow text-cyan-300">Ranqueada Solo/Duo · Ranking atual</p>
             <div class="mt-3 flex items-end justify-between gap-3"><p class="font-display text-2xl font-bold text-amber-100">{{ $conta->elo ?? 'Não sincronizada' }}</p><p class="text-xl font-semibold tabular-nums">{{ $conta->pdl ?? 0 }} <span class="text-xs text-slate-500">LP</span></p></div>
             <p class="mt-2 text-xs text-slate-400">{{ $conta->wins ?? 0 }}V <span class="text-slate-600">/</span> {{ $conta->losses ?? 0 }}D na liga</p>
             <x-rank-progress :progress="$progress" />
@@ -43,7 +43,7 @@
 @if($legacyCount)<div class="notice mb-5">{{ $legacyCount }} registros antigos aguardam confirmação de identidade e estão fora dos indicadores.</div>@endif
 <x-stats-summary :summary="$summary" />
 <div class="mb-6 mt-3 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
-    <span><span class="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-400"></span>{{ $queueLabel }} · {{ $insight['enriched'] }} de {{ $insight['total'] }} partidas com detalhes · Remakes curtos excluídos</span>
+    <span><span class="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-cyan-400"></span>{{ $queueLabel }} · {{ $insight['enriched'] }} de {{ $insight['total'] }} partidas com detalhes · Remakes curtos excluídos</span>
     <span>Horários de Brasília</span>
 </div>
 @include('contas.partials.analytics')
@@ -56,7 +56,7 @@
         <button type="submit" class="btn-secondary" @disabled($conta->latestSync?->isActive())>Importar temporada {{ $season->name }}</button>
     </form>
 </details>
-<details class="mt-5 rounded-lg border border-violet-400/10 p-5">
+<details class="mt-5 rounded-lg border border-cyan-400/10 p-5">
     <summary class="cursor-pointer text-xs text-slate-500">Gerenciar cadastro e informações dos dados</summary>
     <p class="mt-4 text-xs text-slate-500">Última atividade Solo/Duo: {{ $conta->last_game_at?->timezone('America/Sao_Paulo')->format('d/m/Y H:i') ?? 'não disponível' }}. Ranking e histórico podem abranger períodos diferentes. O acompanhamento de decay Mestre+ é uma previsão local; consulte o cliente para o saldo oficial.</p>
     <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-rose-900/30 pt-4">

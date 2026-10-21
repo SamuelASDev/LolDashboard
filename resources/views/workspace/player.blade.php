@@ -1,7 +1,7 @@
 @extends('layouts.main')
 @section('title', 'Histórico do jogador')
 @section('content')
-<a class="text-xs text-violet-300" href="{{ route('players.index') }}">← Buscar jogadores</a>
+<a class="text-xs text-cyan-300" href="{{ route('players.index') }}">← Buscar jogadores</a>
 <h1 class="section-title mt-4 break-words">{{ $player->riot_id }}</h1>
 <form class="panel p-5 my-5" method="POST" action="{{ route('players.note', $player->puuid) }}">
     @csrf @method('PUT')
@@ -14,7 +14,7 @@
 <p class="mb-4 text-xs text-slate-400">{{ $matches->total() }} participações das suas contas. A mesma partida pode aparecer em mais de uma conta.</p>
 <div class="space-y-4">
 @forelse($matches as $match)
-    <p class="text-xs text-violet-300">{{ $match->conta->riot_id }}</p>
+    <p class="text-xs text-cyan-300">{{ $match->conta->riot_id }}</p>
     <x-match-card :match="$match" :player-notes="$playerNotes" />
     @include('workspace.match-note', ['partida'=>$match])
 @empty<p class="panel p-5 text-slate-400">Nenhuma partida neste filtro.</p>@endforelse

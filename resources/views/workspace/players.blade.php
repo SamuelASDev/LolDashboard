@@ -11,7 +11,7 @@
 <div class="grid gap-4 sm:grid-cols-2">
 @forelse($players as $player)
 <a class="panel p-5" href="{{ route('players.show', ['puuid'=>$player->puuid]) }}">
-    <h2 class="text-violet-200 break-words">{{ $player->riot_id }}</h2>
+    <h2 class="text-cyan-200 break-words">{{ $player->riot_id }}</h2>
     <p class="mt-2 text-xs text-slate-400">{{ $player->games }} participações · {{ $player->allies }} no seu time · {{ $player->games - $player->allies }} contra você</p>
     @if($notes->has($player->puuid))<p class="mt-2 text-xs text-amber-200">Com anotação: {{ Str::limit($notes->get($player->puuid), 120) }}</p>@endif
 </a>

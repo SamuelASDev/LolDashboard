@@ -13,7 +13,7 @@
             @php($dateLabel = $partida->played_at->timezone('America/Sao_Paulo')->format('d/m/Y'))
             @if($loop->first || $previousMatchDate !== $dateLabel)<h2 class="match-day">{{ $dateLabel }}</h2>@endif
             @php($previousMatchDate = $dateLabel)
-            @if($aggregate)<p class="mt-4 text-xs text-violet-300"><a class="underline" href="{{ route('contas.show', $partida->conta_id) }}">{{ $partida->conta->riot_id }}</a> · Participação desta conta</p>@endif
+            @if($aggregate)<p class="mt-4 text-xs text-cyan-300"><a class="underline" href="{{ route('contas.show', $partida->conta_id) }}">{{ $partida->conta->riot_id }}</a> · Participação desta conta</p>@endif
             <x-match-card :match="$partida" :player-notes="$playerNotes" />
             @include('workspace.match-note')
         @empty
@@ -32,11 +32,11 @@
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         @forelse($insight['records'] as $metric=>$record)
         <section class="panel relative overflow-hidden p-5">
-            @if($aggregate)<p class="mb-3 text-xs text-violet-300">{{ $accountNames->get($record['match']->conta_id) }}</p>@endif
-            <div class="absolute right-4 top-4 text-3xl text-violet-300/15" aria-hidden="true">✧</div>
+            @if($aggregate)<p class="mb-3 text-xs text-cyan-300">{{ $accountNames->get($record['match']->conta_id) }}</p>@endif
+            <div class="absolute right-4 top-4 text-3xl text-cyan-300/15" aria-hidden="true">✧</div>
             <p class="eyebrow">{{ $metricLabels[$metric] ?? $metric }}</p>
             <p class="mt-4 font-display text-4xl font-bold text-amber-200">{{ \App\Support\GameLabels::number($record['value'], $metric === 'kill_participation' ? 1 : 0) }}</p>
-            <div class="mt-5 flex items-center gap-3 border-t border-violet-400/10 pt-4"><x-game-icon :id="$record['match']->champion_id" :name="$record['match']->champion_name" /><p class="text-sm">{{ $record['match']->champion_name }}<span class="mt-1 block text-[10px] text-slate-500">{{ $record['match']->played_at->timezone('America/Sao_Paulo')->format('d/m/Y · H:i') }}</span></p></div>
+            <div class="mt-5 flex items-center gap-3 border-t border-cyan-400/10 pt-4"><x-game-icon :id="$record['match']->champion_id" :name="$record['match']->champion_name" /><p class="text-sm">{{ $record['match']->champion_name }}<span class="mt-1 block text-[10px] text-slate-500">{{ $record['match']->played_at->timezone('America/Sao_Paulo')->format('d/m/Y · H:i') }}</span></p></div>
         </section>
         @empty
         <div class="panel col-span-full p-10 text-center text-sm text-slate-500">Importe suas partidas para descobrir seus recordes.</div>

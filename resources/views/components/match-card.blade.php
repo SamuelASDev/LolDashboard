@@ -1,7 +1,7 @@
 @props(['match', 'playerNotes' => null])
 <article id="match-{{ $match->id }}" data-result="{{ $match->win ? 'win' : 'loss' }}" class="panel match-card overflow-hidden border-l-4 {{ $match->win ? 'border-l-emerald-500' : 'border-l-rose-500' }}">
 <div class="flex flex-wrap items-center gap-5 p-4 sm:p-5">
-    <div class="w-28 shrink-0"><p class="font-bold {{ $match->win ? 'text-amber-200' : 'text-violet-300' }}">{{ $match->win ? 'Vitória' : 'Derrota' }}</p><p class="mt-1 text-xs text-slate-400">{{ \App\Support\GameLabels::QUEUES[$match->queue_id] ?? 'Ranked' }} · {{ \App\Support\GameLabels::duration($match->duration_seconds) }}</p><time class="text-xs text-slate-500" datetime="{{ $match->played_at->toIso8601String() }}">{{ $match->played_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}</time></div>
+    <div class="w-28 shrink-0"><p class="font-bold {{ $match->win ? 'text-cyan-200' : 'text-rose-300' }}">{{ $match->win ? 'Vitória' : 'Derrota' }}</p><p class="mt-1 text-xs text-slate-400">{{ \App\Support\GameLabels::QUEUES[$match->queue_id] ?? 'Ranked' }} · {{ \App\Support\GameLabels::duration($match->duration_seconds) }}</p><time class="text-xs text-slate-500" datetime="{{ $match->played_at->toIso8601String() }}">{{ $match->played_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}</time></div>
     <div class="flex items-center gap-3"><x-game-icon :id="$match->champion_id" :name="$match->champion_name" size="h-12 w-12" /><div><p class="font-semibold">{{ $match->champion_name }}</p><p class="text-xs text-slate-500">{{ \App\Support\GameLabels::ROLES[$match->lane] ?? $match->lane }}</p></div></div>
     <div><p class="text-lg font-bold tabular-nums">{{ $match->kills }} / <span class="text-rose-300">{{ $match->deaths }}</span> / {{ $match->assists }}</p><p class="text-xs text-slate-400">{{ $match->deaths ? number_format(($match->kills + $match->assists) / $match->deaths, 2) : 'Perfeito' }} KDA · {{ \App\Support\GameLabels::number($match->kill_participation, 1) }}% PA</p></div>
     <div class="text-sm"><p>{{ $match->cs ?? '—' }} CS · {{ \App\Support\GameLabels::number($match->cs_per_minute, 1) }}/min</p><p class="text-xs text-slate-500">{{ \App\Support\GameLabels::number($match->damage) }} dano · {{ $match->vision_score ?? '—' }} visão</p></div>
@@ -10,14 +10,14 @@
     <div class="flex gap-1" aria-label="Runas">@foreach(($match->runes['styles'] ?? []) as $style)@if(isset($style['selections'][0]['perk']))<x-game-icon kind="runes" :id="$style['selections'][0]['perk']" size="h-6 w-6" />@endif @endforeach</div>
 </div>
 @if($match->game)
-<div class="match-lineup-preview border-t border-violet-400/10 px-4 py-3 sm:px-5"><x-match-lineup :players="$match->game->participants" :identity="$match->identity_puuid" /></div>
-<details class="border-t border-violet-400/10">
-<summary class="cursor-pointer px-5 py-3 text-xs font-semibold text-violet-200 hover:bg-violet-400/5">Ver jogadores e placar</summary>
+<div class="match-lineup-preview border-t border-cyan-400/10 px-4 py-3 sm:px-5"><x-match-lineup :players="$match->game->participants" :identity="$match->identity_puuid" /></div>
+<details class="border-t border-cyan-400/10">
+<summary class="cursor-pointer px-5 py-3 text-xs font-semibold text-cyan-200 hover:bg-cyan-400/5">Ver jogadores e placar</summary>
 @foreach($match->game->participants->groupBy('team_id') as $team => $players)
-<div class="border-t border-violet-400/10 px-5 py-3">
+<div class="border-t border-cyan-400/10 px-5 py-3">
 <p class="mb-3 text-sm font-semibold {{ $team == 100 ? 'text-sky-300' : 'text-rose-300' }}">{{ $team == 100 ? 'Time azul' : ($team == 200 ? 'Time vermelho' : 'Participantes') }} · {{ $players->sum('kills') }} abates · {{ number_format($players->sum(fn ($p) => $p->stats['goldEarned'] ?? 0), 0, ',', '.') }} ouro</p>
 <div class="overflow-x-auto"><table class="compact-table w-full min-w-[650px] text-left text-xs"><caption class="sr-only">Placar da partida {{ $match->match_id }}</caption><thead class="text-slate-500"><tr><th class="py-2">Jogador / campeão</th><th>K / D / A</th><th>CS</th><th>Dano</th><th>Ouro</th><th>Visão</th><th>Build / feitiços</th></tr></thead><tbody>
-@foreach($players as $player)<tr class="border-t border-violet-400/10 {{ $player->puuid === $match->identity_puuid ? 'bg-amber-400/5 text-amber-200' : '' }}"><th class="py-3 pr-3 font-normal"><span class="flex items-center gap-2"><x-game-icon :id="$player->champion_id" :name="$player->champion_name" size="h-8 w-8" /><span><span class="block">
+@foreach($players as $player)<tr class="border-t border-cyan-400/10 {{ $player->puuid === $match->identity_puuid ? 'bg-amber-400/5 text-amber-200' : '' }}"><th class="py-3 pr-3 font-normal"><span class="flex items-center gap-2"><x-game-icon :id="$player->champion_id" :name="$player->champion_name" size="h-8 w-8" /><span><span class="block">
     @if($player->puuid && $player->puuid !== $match->identity_puuid)
         <a class="underline" href="{{ route('players.show', $player->puuid) }}">{{ $player->riot_id }}</a>
         @if($playerNotes?->has($player->puuid))
@@ -33,5 +33,5 @@
 </div>@endforeach
 <p class="px-5 py-3 text-xs text-slate-500">Patch {{ $match->game->game_version ?? 'não informado' }} · {{ $match->match_id }} · Build ao final da partida · Ícones do catálogo Data Dragon atual.</p>
 </details>
-@else<p class="border-t border-violet-400/10 px-5 py-3 text-xs text-slate-500">Detalhes ainda não importados. Sincronize a conta para enriquecer esta partida.</p>@endif
+@else<p class="border-t border-cyan-400/10 px-5 py-3 text-xs text-slate-500">Detalhes ainda não importados. Sincronize a conta para enriquecer esta partida.</p>@endif
 </article>

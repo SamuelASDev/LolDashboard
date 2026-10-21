@@ -14,7 +14,7 @@
     <p id="decay-help" class="mt-3 max-w-3xl text-[11px] leading-relaxed text-slate-500">O painel projeta períodos de 24 horas e considera apenas partidas Solo/Duo detalhadas, sem remakes, após a referência. O desconto da Riot ocorre no ciclo diário, então o horário é aproximado. Histórico incompleto, promoção/rebaixamento e jogos ainda não sincronizados podem alterar o resultado. A estimativa automática pressupõe permanência em Mestre+ durante a janela analisada. Confirme o saldo e a perda efetiva no cliente.</p>
     @if($decay['manual'])
         <p class="mt-3 text-xs text-slate-400">Referência informada em {{ $decay['reference_at']->timezone('America/Sao_Paulo')->format('d/m/Y H:i') }} (Brasília) · {{ $decay['games'] }} partidas consideradas depois dela.</p>
-        <form method="POST" action="{{ route('contas.decay.destroy', $conta) }}" class="mt-3">@csrf @method('DELETE')<button class="text-xs text-violet-300 underline" type="submit">Voltar à estimativa automática</button></form>
+        <form method="POST" action="{{ route('contas.decay.destroy', $conta) }}" class="mt-3">@csrf @method('DELETE')<button class="text-xs text-cyan-300 underline" type="submit">Voltar à estimativa automática</button></form>
     @endif
     <p class="mt-3 text-[10px] text-slate-500"><a class="underline" href="{{ \App\Queries\AccountDecay::SOURCE }}" target="_blank" rel="noopener noreferrer">Regras da Riot</a>: Mestre, Grão-Mestre e Desafiante · 1 dia por partida · máximo de 14 · 75 LP por dia sem reserva. Monitoramento deste painel restrito a Mestre+ Solo/Duo.</p>
 </details>

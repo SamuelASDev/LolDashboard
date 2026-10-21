@@ -8,7 +8,7 @@
 <div class="grid gap-4">
 @foreach($seasons as $item)
 <article class="panel flex flex-wrap items-center justify-between gap-5 p-5">
-    <div><h2 class="text-lg font-semibold">{{ $item->name }} <span class="ml-2 text-xs text-violet-300">{{ ['draft'=>'Não iniciada','active'=>'Atual','ended'=>'Encerrada'][$item->status] }}</span></h2>
+    <div><h2 class="text-lg font-semibold">{{ $item->name }} <span class="ml-2 text-xs text-cyan-300">{{ ['draft'=>'Não iniciada','active'=>'Atual','ended'=>'Encerrada'][$item->status] }}</span></h2>
     <p class="mt-2 text-xs text-slate-400">Início: {{ $item->starts_at?->timezone('America/Sao_Paulo')->format('d/m/Y H:i:s') ?? 'ao iniciar' }} · Fim: {{ $item->ends_at?->timezone('America/Sao_Paulo')->format('d/m/Y H:i:s') ?? '—' }}</p></div>
     @if($item->status === 'draft')
     <form method="POST" action="{{ route('admin.seasons.activate', $item) }}" onsubmit="return confirm('Iniciar esta temporada agora e encerrar a atual? O histórico anterior será preservado.')">

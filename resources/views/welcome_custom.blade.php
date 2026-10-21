@@ -17,6 +17,6 @@
             @endforeach
         </section>
     </main>
-    <footer class="mx-auto max-w-6xl border-t border-violet-400/15 px-6 py-7 text-xs leading-relaxed text-slate-500">LoL Dashboard não é endossado pela Riot Games e não reflete suas opiniões. League of Legends e Riot Games são marcas de seus respectivos titulares. Dados dependem da disponibilidade da API; este painel não prevê decay nem promoções.</footer>
+    <footer class="mx-auto max-w-6xl border-t border-cyan-400/15 px-6 py-7 text-xs leading-relaxed text-slate-500">LoL Dashboard não é endossado pela Riot Games e não reflete suas opiniões. League of Legends e Riot Games são marcas de seus respectivos titulares. Dados dependem da disponibilidade da API; este painel não prevê decay nem promoções.</footer>
 </body>
 </html>

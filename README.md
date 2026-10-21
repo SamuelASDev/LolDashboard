@@ -20,7 +20,7 @@ Desenvolvido por [SamuelASDev](https://github.com/SamuelASDev). Código disponib
 - [Testes e qualidade](#testes-e-qualidade)
 - [Publicação e atualização](#publicação-e-atualização)
 - [Solução de problemas](#solução-de-problemas)
-- [Contribuição e documentação](#contribuição-e-documentação)
+- [Contribuição](#contribuição)
 - [Licença e créditos](#licença-e-créditos)
 
 ## Funcionalidades
@@ -192,14 +192,13 @@ npm run dev
 
 Cada comando ocupa seu próprio terminal. No PowerShell, use `npm.cmd run dev`. Se mudar a conexão da fila Riot, ajuste também o argumento do worker.
 
-Para hospedagem com cron e sem worker permanente, use `scripts/cron-worker.php`: ele inicia um worker temporário e evita sobreposição com o lock nativo do PHP, sem depender do comando shell flock. Configure sua chamada a cada minuto e mantenha outra tarefa para `artisan schedule:run`. Use `php scripts/cron-worker.php --check` para verificar bootstrap/configuração/lock sem consumir jobs. Consulte [operação](docs/OPERACAO.md) para preenchimento no hPanel e limitações.
+Para hospedagem com cron e sem worker permanente, use `scripts/cron-worker.php`: ele inicia um worker temporário e evita sobreposição com o lock nativo do PHP, sem depender do comando shell flock. Configure sua chamada a cada minuto e mantenha outra tarefa para `artisan schedule:run`. Use `php scripts/cron-worker.php --check` para verificar bootstrap/configuração/lock sem consumir jobs.
 
 | Comando | Uso |
 | --- | --- |
 | `php artisan riot:recover` | Recuperar etapas paradas, respeitando locks e próximo horário permitido |
 | `php artisan riot:cutoffs` | Atualizar/reutilizar as referências de corte do dia |
 | `php artisan queue:failed` | Consultar falhas da infraestrutura de fila |
-| `php artisan dashboard:storage-health` | Relatar volume/cache antigo sem referência, sem apagar dados |
 | `npm.cmd run assets:update` | Atualizar o catálogo público e revisar o JSON resultante |
 
 O scheduler agenda recuperação a cada cinco minutos e cortes às 03:10 de Brasília. O catálogo usa o CDN público Data Dragon, sem consumir a chave Riot. Ícones atuais não reconstroem atributos históricos dos itens por patch.
@@ -239,7 +238,6 @@ resources/
 routes/              Web, autenticação e agenda
 scripts/             Inicialização local e atualização de assets
 tests/               PHP, JavaScript e navegador
-docs/                Documentação de operação
 ```
 
 O cache compartilhado evita baixar novamente uma partida já importada. Projeções pessoais continuam vinculadas à conta; anotações pertencem ao usuário. Não existe rota pública para consultar livremente o cache por ID.
@@ -294,7 +292,7 @@ Em atualizações, preserve dados, `.env` e `APP_KEY`; instale os lockfiles, ger
 
 Em hospedagem compartilhada, incluindo a configuração planejada para Hostinger Business, confirme os recursos reais de PHP, SSH, cron, caminhos e limites da conta. A execução da fila precisa ser adaptada e homologada nesse ambiente. **Não há deploy automático para a Hostinger configurado neste repositório.** Em servidor com supervisão, mantenha worker supervisionado e execute `php artisan schedule:run` a cada minuto por cron.
 
-Não há limpeza automática de histórico/cache. O inventário não mede sozinho espaço físico, índices, logs ou backups. Consulte o procedimento de backup/restauração e os detalhes em [docs/OPERACAO.md](docs/OPERACAO.md).
+Não há limpeza automática de histórico/cache.
 
 ## Solução de problemas
 
@@ -311,15 +309,11 @@ Não há limpeza automática de histórico/cache. O inventário não mede sozinh
 
 Consulte os logs sem publicar credenciais, links privados de verificação ou dados de usuários em issues.
 
-## Contribuição e documentação
+## Contribuição
 
 Use `dev` para desenvolvimento e `main` para a versão integrada. Faça mudanças pequenas, descreva a motivação e execute verificações proporcionais ao que mudou.
 
-Antes de alterar, consulte a documentação de operação, preserve o isolamento por usuário e simule integrações nos testes. Não versione `.env`, chaves, dumps, dados pessoais, `vendor/`, `node_modules/` ou fixtures geradas.
-
-| Documento | Conteúdo |
-| --- | --- |
-| [Operação](docs/OPERACAO.md) | Instalação, atualização, configuração e recuperação |
+Preserve o isolamento por usuário e simule integrações nos testes. Não versione `.env`, chaves, dumps, dados pessoais, `vendor/`, `node_modules/` ou fixtures geradas.
 
 ## Licença e créditos
 
